@@ -25,3 +25,5 @@ make help        # everything else
 Without Docker: `make dev-backend` and `make dev-frontend` in two terminals. The
 Vite dev server proxies `/api` to the backend, the same way the Ingress does in
 preview and prod.
+
+Every pull request gets a preview environment at `pr-<n>.coins.danielvdspoel.com`; see [`deploy/README.md`](deploy/README.md).

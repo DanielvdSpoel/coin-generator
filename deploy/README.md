@@ -90,6 +90,20 @@ must be in the Reflector allow-list of `infrastructure/ghcr-pull-secret`.
   `cluster/preview-wildcard-certificate.yml`; running previews pick up the new
   Secret without a redeploy.
 
+## Known gaps
+
+- **Cluster CPU is nearly fully requested** (3 nodes × 2 vCPU, ~90 % of requests
+  allocated by other apps on 2026-09-28). The charts use small CPU requests so
+  pods schedule; phase 1+ builds will need either a fourth node or right-sizing
+  the other apps' requests before raising ours.
+
+- **No metrics-server on the cluster.** The prod backend runs a fixed 2 replicas;
+  `hpa.enabled` stays false until metrics-server is installed from the cluster
+  repo (phase 8).
+- **Images must declare a numeric `USER`.** The chart sets `runAsNonRoot: true`,
+  and Kubernetes rejects an image whose user is a name (`CreateContainerConfigError:
+  image has non-numeric user`). Both Dockerfiles use numeric UIDs.
+
 ## Secrets
 
 None in phase 0. The contact email (phase 7/8) adds a `coin-generator-smtp`

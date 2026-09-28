@@ -57,8 +57,10 @@ backend:
     - { name: tmp, emptyDir: {} }
   extraVolumeMounts:
     - { name: tmp, mountPath: /tmp }
+  # Requests are scheduling reservations, not usage. The cluster is 3 × 2 vCPU and
+  # nearly fully requested, so keep them small; limits still allow real builds.
   resources:
-    requests: { cpu: 250m, memory: 512Mi }
+    requests: { cpu: 100m, memory: 256Mi }
     limits: { cpu: "1", memory: 1Gi }
   terminationGracePeriodSeconds: 30
   pdb: { enabled: false }
@@ -100,7 +102,7 @@ frontend:
     initialDelaySeconds: 2
     periodSeconds: 10
   resources:
-    requests: { cpu: 25m, memory: 32Mi }
+    requests: { cpu: 10m, memory: 32Mi }
     limits: { cpu: 200m, memory: 128Mi }
   pdb: { enabled: false }
   hpa: { enabled: false }

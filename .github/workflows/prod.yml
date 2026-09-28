@@ -78,6 +78,17 @@ jobs:
       - name: Log in to GHCR (OCI chart dependencies)
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
       - run: helm dependency build deploy/prod
+      - name: Clear a stuck release (left behind by a cancelled run)
+        run: |
+          STATUS=$(helm status "$RELEASE" -n "$NAMESPACE" -o json 2>/dev/null | python3 -c 'import sys,json;print(json.load(sys.stdin)["info"]["status"])' || echo none)
+          echo "release status: $STATUS"
+          case "$STATUS" in
+            pending-install)
+              helm uninstall "$RELEASE" -n "$NAMESPACE" --no-hooks --wait --timeout 2m || true ;;
+            pending-upgrade|pending-rollback)
+              helm rollback "$RELEASE" -n "$NAMESPACE" --wait --timeout 2m || \
+              kubectl -n "$NAMESPACE" delete secret -l "owner=helm,name=$RELEASE,status=$STATUS" ;;
+          esac
       - name: Helm upgrade --install
         run: |
           helm upgrade --install "$RELEASE" deploy/prod \
