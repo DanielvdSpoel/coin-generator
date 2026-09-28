@@ -1,0 +1,36 @@
+# Local development stack. `make dev` or `docker compose up --build`.
+# Backend on :8000 with reload, frontend Vite dev server on :5173 proxying /api.
+services:
+  backend:
+    build:
+      context: ./backend
+      target: deps
+    command: >
+      /app/.venv/bin/uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    working_dir: /app
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/fonts:/app/fonts
+      - ./backend/data:/app/data
+    environment:
+      ENVIRONMENT: dev
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8000:8000"
+
+  frontend:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm ci --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    environment:
+      VITE_DEV_API_PROXY: http://backend:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  frontend_node_modules:

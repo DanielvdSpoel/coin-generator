@@ -1,0 +1,31 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+backend/.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.eslintcache
+frontend/*.tsbuildinfo
+
+# Helm
+deploy/*/charts/
+
+# Secrets: plaintext manifests never, sealed ones always (same rule as the cluster repo)
+*secret.yml
+*secret.yaml
+!*sealedsecret.yaml
+ci-kubeconfig.yaml
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Impeccable local state
+.impeccable/config.local.json

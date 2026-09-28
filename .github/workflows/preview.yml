@@ -1,0 +1,153 @@
+# Per-PR preview environment on the UpCloud cluster (pattern shared with mailbunny).
+#
+#   PR opened / updated  → build+push both images (tag sha-<sha> and pr-<n>)
+#                        → helm upgrade --install pr-<n> into ns coin-generator-preview
+#                        → sticky PR comment with the URL
+#   PR closed / merged   → helm uninstall pr-<n>, comment
+#
+# TLS comes from the shared wildcard certificate in deploy/cluster/ (DNS-01), so
+# previews need no per-PR certificate and the wildcard DNS record may be proxied
+# by Cloudflare (orange cloud).
+#
+# Required repo secret:  KUBECONFIG_PREVIEW (from deploy/generate-ci-kubeconfig.sh)
+# Required repo var:     PREVIEW_DOMAIN (coins.danielvdspoel.com — a wildcard
+#                        *.PREVIEW_DOMAIN record must point at the Traefik LB)
+name: Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+env:
+  NAMESPACE: coin-generator-preview
+  RELEASE: pr-${{ github.event.pull_request.number }}
+  HOST: pr-${{ github.event.pull_request.number }}.${{ vars.PREVIEW_DOMAIN }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.service }}
+    if: github.event.action != 'closed' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/danielvdspoel/coin-generator-${{ matrix.service }}
+          # On pull_request events github.sha is the synthetic merge commit; tag with
+          # the PR head sha explicitly so the deploy job can address the same image.
+          tags: |
+            type=raw,value=sha-${{ github.event.pull_request.head.sha }}
+            type=raw,value=pr-${{ github.event.pull_request.number }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy:
+    name: Deploy preview
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      pull-requests: write
+    environment:
+      name: preview
+      url: https://${{ env.HOST }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v4
+      - name: Configure kubeconfig
+        env: { KUBECONFIG_DATA: "${{ secrets.KUBECONFIG_PREVIEW }}" }
+        run: |
+          mkdir -p "$HOME/.kube"
+          printf '%s' "$KUBECONFIG_DATA" > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+      - name: Log in to GHCR (OCI chart dependencies)
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+      - run: helm dependency build deploy/preview
+      - name: Clear a stuck release (left behind by a cancelled run)
+        run: |
+          STATUS=$(helm status "$RELEASE" -n "$NAMESPACE" -o json 2>/dev/null | python3 -c 'import sys,json;print(json.load(sys.stdin)["info"]["status"])' || echo none)
+          echo "release status: $STATUS"
+          case "$STATUS" in
+            pending-install)
+              helm uninstall "$RELEASE" -n "$NAMESPACE" --no-hooks --wait --timeout 2m || true ;;
+            pending-upgrade|pending-rollback)
+              helm rollback "$RELEASE" -n "$NAMESPACE" --wait --timeout 2m || \
+              kubectl -n "$NAMESPACE" delete secret -l "owner=helm,name=$RELEASE,status=$STATUS" ;;
+          esac
+      - name: Helm upgrade --install
+        run: |
+          SHA_TAG="sha-${{ github.event.pull_request.head.sha }}"
+          helm upgrade --install "$RELEASE" deploy/preview \
+            -n "$NAMESPACE" \
+            --set host="$HOST" \
+            --set backend.image.tag="$SHA_TAG" \
+            --set frontend.image.tag="$SHA_TAG" \
+            --wait --timeout 6m
+      - name: Wait for HTTPS
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 10 "https://$HOST/api/health" >/dev/null 2>&1; then echo "up"; exit 0; fi
+            sleep 15
+          done
+          echo "::warning::Preview deployed but https://$HOST/api/health not yet reachable (DNS may still be propagating)"
+      - name: Comment on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview
+          message: |
+            ### 🪙 Preview environment
+            **https://${{ env.HOST }}** — API at `/api`, health at `/api/health`
+            Release `${{ env.RELEASE }}` in `${{ env.NAMESPACE }}`, images `sha-${{ github.event.pull_request.head.sha }}`.
+            Stateless: nothing to wipe when the PR closes.
+
+  teardown:
+    name: Tear down preview
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: azure/setup-helm@v4
+      - name: Configure kubeconfig
+        env: { KUBECONFIG_DATA: "${{ secrets.KUBECONFIG_PREVIEW }}" }
+        run: |
+          mkdir -p "$HOME/.kube"
+          printf '%s' "$KUBECONFIG_DATA" > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+      - name: Helm uninstall
+        run: |
+          helm uninstall "$RELEASE" -n "$NAMESPACE" --wait --timeout 3m || echo "release not found"
+      - uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview
+          message: |
+            ### 🪙 Preview environment
+            Torn down — release `${{ env.RELEASE }}` removed from `${{ env.NAMESPACE }}`.

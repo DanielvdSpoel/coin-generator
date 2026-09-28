@@ -1,0 +1,21 @@
+# One wildcard certificate shared by every PR preview (pr-<n>.coins.danielvdspoel.com).
+#
+# Previews reference the resulting Secret by name instead of requesting a
+# certificate per release: new previews get TLS instantly, nothing waits on
+# ACME, and there is no per-PR cert to clean up on teardown. Wildcards are only
+# possible with DNS-01, hence the letsencrypt-dns01 issuer.
+#
+# cert-manager renews it automatically (~30 days before expiry) and Traefik
+# picks up the new Secret contents without a restart.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: coins-preview-wildcard
+  namespace: coin-generator-preview
+spec:
+  secretName: coins-preview-wildcard-tls
+  issuerRef:
+    name: letsencrypt-dns01
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.coins.danielvdspoel.com"

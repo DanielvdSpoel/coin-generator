@@ -1,0 +1,99 @@
+# =============================================================================
+# coin-generator — production
+# =============================================================================
+# CI deploys on push to main:
+#   helm upgrade --install coin-generator deploy/prod -n coin-generator \
+#     --set backend.image.tag=sha-<sha> --set frontend.image.tag=sha-<sha>
+# Same structure as deploy/preview; only numbers differ. Phase 8 adds the
+# ServiceMonitor, rate-limit Middleware and NetworkPolicy templates here.
+# =============================================================================
+
+host: coins.danielvdspoel.com
+
+ingress:
+  className: traefik
+  # DNS-01 so the host can sit behind Cloudflare's proxy (orange cloud); HTTP-01
+  # would have to pass through the proxy and breaks on WAF/redirect rules.
+  tlsSecretName: ""
+  certIssuer: letsencrypt-dns01
+  annotations: {}
+
+backend:
+  nameOverride: api
+  image:
+    repository: ghcr.io/danielvdspoel/coin-generator-backend
+    tag: ""
+  imagePullSecrets:
+    - name: ghcr-secret
+  port: 8000
+  env:
+    ENVIRONMENT: prod
+    BUILD_WORKERS: "2"
+    CORS_ORIGINS: ""
+  livenessProbe:
+    httpGet: { path: /api/healthz, port: http }
+    initialDelaySeconds: 5
+    periodSeconds: 30
+  readinessProbe:
+    httpGet: { path: /api/health, port: http }
+    initialDelaySeconds: 3
+    periodSeconds: 10
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    capabilities: { drop: [ALL] }
+    seccompProfile: { type: RuntimeDefault }
+  extraVolumes:
+    - { name: tmp, emptyDir: {} }
+  extraVolumeMounts:
+    - { name: tmp, mountPath: /tmp }
+  resources:
+    requests: { cpu: 500m, memory: 512Mi }
+    limits: { cpu: "2", memory: 1Gi }
+  # Must exceed BUILD_TIMEOUT_S so an in-flight build finishes on rollout.
+  terminationGracePeriodSeconds: 45
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    cpuTargetPercent: 60
+  pdb: { enabled: true, minAvailable: 1 }
+  ingress:
+    enabled: false
+
+frontend:
+  nameOverride: web
+  image:
+    repository: ghcr.io/danielvdspoel/coin-generator-frontend
+    tag: ""
+  imagePullSecrets:
+    - name: ghcr-secret
+  replicas: 2
+  port: 8080
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    capabilities: { drop: [ALL] }
+    seccompProfile: { type: RuntimeDefault }
+  extraVolumes:
+    - { name: tmp, emptyDir: {} }
+    - { name: nginx-cache, emptyDir: {} }
+  extraVolumeMounts:
+    - { name: tmp, mountPath: /tmp }
+    - { name: nginx-cache, mountPath: /var/cache/nginx }
+  livenessProbe:
+    httpGet: { path: /health, port: http }
+    initialDelaySeconds: 5
+    periodSeconds: 30
+  readinessProbe:
+    httpGet: { path: /health, port: http }
+    initialDelaySeconds: 2
+    periodSeconds: 10
+  resources:
+    requests: { cpu: 25m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 128Mi }
+  pdb: { enabled: true, minAvailable: 1 }
+  ingress:
+    enabled: false

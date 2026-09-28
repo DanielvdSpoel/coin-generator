@@ -1,0 +1,14 @@
+# Namespaces for coin-generator.
+# Applied once by a cluster admin (CI kubeconfigs are namespace-scoped and
+# cannot create namespaces). Reflector mirrors `ghcr-secret` into both —
+# the namespaces are listed in ../upcloud-cluster/infrastructure/ghcr-pull-secret.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: coin-generator
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: coin-generator-preview

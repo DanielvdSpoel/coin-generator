@@ -1,0 +1,109 @@
+# =============================================================================
+# coin-generator-preview — per-PR environment
+# =============================================================================
+# CI installs one release per PR:
+#   helm upgrade --install pr-<n> deploy/preview -n coin-generator-preview \
+#     --set host=pr-<n>.coins.danielvdspoel.com \
+#     --set backend.image.tag=sha-<sha> --set frontend.image.tag=sha-<sha>
+#
+# Everything lives in ONE namespace (coin-generator-preview) so a single
+# namespace-scoped CI kubeconfig can create and destroy environments. The app is
+# stateless, so a preview is just the two Deployments and an Ingress.
+# =============================================================================
+
+host: ""
+
+ingress:
+  className: traefik
+  # Previews share the wildcard certificate *.coins.danielvdspoel.com issued once
+  # by deploy/cluster/preview-wildcard-certificate.yml (DNS-01). With tlsSecretName
+  # set, cert-manager is not involved per release: TLS is instant and there is
+  # nothing to clean up on teardown.
+  tlsSecretName: coins-preview-wildcard-tls
+  certIssuer: letsencrypt-dns01
+  annotations: {}
+
+# -----------------------------------------------------------------------------
+# API (web-service chart). Service name: <release>-api
+# -----------------------------------------------------------------------------
+backend:
+  nameOverride: api
+  image:
+    repository: ghcr.io/danielvdspoel/coin-generator-backend
+    tag: ""
+  imagePullSecrets:
+    - name: ghcr-secret
+  replicas: 1
+  port: 8000
+  env:
+    ENVIRONMENT: preview
+    BUILD_WORKERS: "1"
+    CORS_ORIGINS: ""
+  livenessProbe:
+    httpGet: { path: /api/healthz, port: http }
+    initialDelaySeconds: 5
+    periodSeconds: 30
+  readinessProbe:
+    httpGet: { path: /api/health, port: http }
+    initialDelaySeconds: 3
+    periodSeconds: 10
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    capabilities: { drop: [ALL] }
+    seccompProfile: { type: RuntimeDefault }
+  extraVolumes:
+    - { name: tmp, emptyDir: {} }
+  extraVolumeMounts:
+    - { name: tmp, mountPath: /tmp }
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { cpu: "1", memory: 1Gi }
+  terminationGracePeriodSeconds: 30
+  pdb: { enabled: false }
+  hpa: { enabled: false }
+  topologySpread: { enabled: false }
+  ingress:
+    enabled: false                    # the umbrella chart owns the Ingress
+
+# -----------------------------------------------------------------------------
+# SPA (web-service chart). Service name: <release>-web
+# -----------------------------------------------------------------------------
+frontend:
+  nameOverride: web
+  image:
+    repository: ghcr.io/danielvdspoel/coin-generator-frontend
+    tag: ""
+  imagePullSecrets:
+    - name: ghcr-secret
+  replicas: 1
+  port: 8080
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    capabilities: { drop: [ALL] }
+    seccompProfile: { type: RuntimeDefault }
+  extraVolumes:
+    - { name: tmp, emptyDir: {} }
+    - { name: nginx-cache, emptyDir: {} }
+  extraVolumeMounts:
+    - { name: tmp, mountPath: /tmp }
+    - { name: nginx-cache, mountPath: /var/cache/nginx }
+  livenessProbe:
+    httpGet: { path: /health, port: http }
+    initialDelaySeconds: 5
+    periodSeconds: 30
+  readinessProbe:
+    httpGet: { path: /health, port: http }
+    initialDelaySeconds: 2
+    periodSeconds: 10
+  resources:
+    requests: { cpu: 25m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 128Mi }
+  pdb: { enabled: false }
+  hpa: { enabled: false }
+  topologySpread: { enabled: false }
+  ingress:
+    enabled: false

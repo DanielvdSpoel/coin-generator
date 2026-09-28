@@ -1,0 +1,15 @@
+apiVersion: v2
+name: coin-generator-preview
+description: One ephemeral Coin Designer environment per pull request — API + SPA, single host, no state.
+type: application
+version: 0.1.0
+appVersion: "0.0.0"
+dependencies:
+  - name: web-service
+    alias: backend
+    version: 0.1.1
+    repository: oci://ghcr.io/danielvdspoel/charts
+  - name: web-service
+    alias: frontend
+    version: 0.1.1
+    repository: oci://ghcr.io/danielvdspoel/charts

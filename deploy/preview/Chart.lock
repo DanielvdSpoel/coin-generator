@@ -1,0 +1,9 @@
+dependencies:
+- name: web-service
+  repository: oci://ghcr.io/danielvdspoel/charts
+  version: 0.1.1
+- name: web-service
+  repository: oci://ghcr.io/danielvdspoel/charts
+  version: 0.1.1
+digest: sha256:2c0fd527225ed59ea7a0c02389b1a80a6fe5762eaeaa1848a5025a76a423e6d6
+generated: "2026-09-28T22:26:56.370545993+02:00"

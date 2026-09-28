@@ -1,0 +1,44 @@
+# One host per environment. Path routing keeps the SPA and API same-origin, so the
+# frontend image is environment-agnostic (VITE_API_URL=/api) and no CORS is needed.
+#
+# TLS: when `ingress.tlsSecretName` is set the Ingress uses that existing Secret
+# (previews share the wildcard certificate from deploy/cluster/) and cert-manager is
+# not involved. Otherwise cert-manager issues a per-release certificate through
+# `ingress.certIssuer` (prod).
+{{- if not .Values.host }}
+{{- fail "host is required: --set host=<hostname>" }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "coin.labels" . | nindent 4 }}
+  annotations:
+    {{- if not .Values.ingress.tlsSecretName }}
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.certIssuer | quote }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts: [{{ .Values.host | quote }}]
+      secretName: {{ .Values.ingress.tlsSecretName | default (printf "%s-tls" .Release.Name) }}
+  rules:
+    - host: {{ .Values.host | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "coin.apiService" . }}
+                port: { number: 80 }
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "coin.webService" . }}
+                port: { number: 80 }
