@@ -92,6 +92,11 @@ must be in the Reflector allow-list of `infrastructure/ghcr-pull-secret`.
 
 ## Known gaps
 
+- **Cluster CPU is nearly fully requested** (3 nodes × 2 vCPU, ~90 % of requests
+  allocated by other apps on 2026-09-28). The charts use small CPU requests so
+  pods schedule; phase 1+ builds will need either a fourth node or right-sizing
+  the other apps' requests before raising ours.
+
 - **No metrics-server on the cluster.** The prod backend runs a fixed 2 replicas;
   `hpa.enabled` stays false until metrics-server is installed from the cluster
   repo (phase 8).

@@ -48,8 +48,10 @@ backend:
     - { name: tmp, emptyDir: {} }
   extraVolumeMounts:
     - { name: tmp, mountPath: /tmp }
+  # Requests are scheduling reservations. The cluster (3 × 2 vCPU) is nearly fully
+  # requested by other apps; raise these (and add a node) once real builds run.
   resources:
-    requests: { cpu: 500m, memory: 512Mi }
+    requests: { cpu: 250m, memory: 384Mi }
     limits: { cpu: "2", memory: 1Gi }
   # Must exceed BUILD_TIMEOUT_S so an in-flight build finishes on rollout.
   terminationGracePeriodSeconds: 45
@@ -92,7 +94,7 @@ frontend:
     initialDelaySeconds: 2
     periodSeconds: 10
   resources:
-    requests: { cpu: 25m, memory: 32Mi }
+    requests: { cpu: 10m, memory: 32Mi }
     limits: { cpu: 200m, memory: 128Mi }
   pdb: { enabled: true, minAvailable: 1 }
   ingress:
