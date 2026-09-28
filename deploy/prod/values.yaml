@@ -53,11 +53,11 @@ backend:
     limits: { cpu: "2", memory: 1Gi }
   # Must exceed BUILD_TIMEOUT_S so an in-flight build finishes on rollout.
   terminationGracePeriodSeconds: 45
-  hpa:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 6
-    cpuTargetPercent: 60
+  replicas: 2
+  # The cluster has no metrics-server (metrics.k8s.io), so an HPA cannot read CPU
+  # and never scales. Install metrics-server from the cluster repo, then set
+  # hpa.enabled: true (min 2, max 6, 60 % CPU) and drop `replicas`. See phase 8.
+  hpa: { enabled: false }
   pdb: { enabled: true, minAvailable: 1 }
   ingress:
     enabled: false

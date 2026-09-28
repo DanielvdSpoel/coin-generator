@@ -36,7 +36,7 @@ are available on top of what is listed here.
 - [ ] Trivy scan step in `ci.yml`; fail on critical CVEs.
 
 ### 8.2 Prod chart (`deploy/prod`)
-- [ ] Backend values: `hpa` 2–6 at 60 % CPU, requests 500m/512Mi, limits 2 CPU/1Gi,
+- [ ] Backend values: `hpa` 2–6 at 60 % CPU (after metrics-server), requests 500m/512Mi, limits 2 CPU/1Gi,
       `env.BUILD_WORKERS: "2"`, `terminationGracePeriodSeconds` > build timeout
       (the chart's `preStop` sleep handles Traefik deregistration).
 - [ ] Frontend values: 2 replicas, PDB on (chart creates it automatically when

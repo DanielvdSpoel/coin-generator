@@ -90,6 +90,15 @@ must be in the Reflector allow-list of `infrastructure/ghcr-pull-secret`.
   `cluster/preview-wildcard-certificate.yml`; running previews pick up the new
   Secret without a redeploy.
 
+## Known gaps
+
+- **No metrics-server on the cluster.** The prod backend runs a fixed 2 replicas;
+  `hpa.enabled` stays false until metrics-server is installed from the cluster
+  repo (phase 8).
+- **Images must declare a numeric `USER`.** The chart sets `runAsNonRoot: true`,
+  and Kubernetes rejects an image whose user is a name (`CreateContainerConfigError:
+  image has non-numeric user`). Both Dockerfiles use numeric UIDs.
+
 ## Secrets
 
 None in phase 0. The contact email (phase 7/8) adds a `coin-generator-smtp`
