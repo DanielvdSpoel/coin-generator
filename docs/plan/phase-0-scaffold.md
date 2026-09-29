@@ -91,11 +91,11 @@ Anything that depends on the engine. Hardening (phase 8).
 - [x] `deploy/cluster/namespaces.yml` and `preview-wildcard-certificate.yml`
       (namespaces, shared `*.coins` certificate via `letsencrypt-dns01`); confirm
       `ghcr-secret` was reflected into both.
-- [ ] Run the kubeconfig script for both namespaces; `gh secret set`.
+- [x] Run the kubeconfig script for both namespaces; `gh secret set`.
 - [x] Cloudflare: `coins.danielvdspoel.com` (orange, Full strict) and
       `*.coins.danielvdspoel.com` (grey: Universal SSL does not cover second-level
       names) → Traefik LB.
-- [ ] Repo variable `PREVIEW_DOMAIN=coins.danielvdspoel.com`.
+- [x] Repo variable `PREVIEW_DOMAIN=coins.danielvdspoel.com`.
 - [ ] Optional: `ResourceQuota` in the preview namespace so many open PRs cannot
       starve prod; add it to `../upcloud-cluster/apps/coin-generator/` alongside
       the namespace manifests so the cluster repo stays the source of truth for
@@ -119,8 +119,13 @@ Anything that depends on the engine. Hardening (phase 8).
 
 ## Status
 
-Scaffold implemented 2026-09-28. Open items are the one-time cluster steps in 0.6 and
-the first real PR to prove the preview loop. shadcn-vue's defaults pulled the Geist
+**Complete 2026-09-28.** PR #1 proved the loop: preview at `pr-1.coins…` in ~1.5 min
+after CI, teardown in 13 s, prod deployed on merge in ~2 min with health and TLS
+verified (behind Cloudflare, `cf-ray` present). Three things broke on the way and are
+fixed: the backend image needed a numeric `USER`; the cluster has no metrics-server so
+the HPA is off; cluster CPU requests were near capacity (see
+`docs/reference/cluster-cpu-rightsizing-2026-09-28.md`). Only the optional
+`ResourceQuota` and `kubeconform` items remain open. shadcn-vue's defaults pulled the Geist
 font from Google Fonts into `src/assets/main.css`; phase 3 (or `/impeccable shape`)
 decides the real typography and should replace that import.
 

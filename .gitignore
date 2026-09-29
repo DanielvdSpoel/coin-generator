@@ -29,3 +29,8 @@ ci-kubeconfig.yaml
 
 # Impeccable local state
 .impeccable/config.local.json
+.impeccable/review/
+.impeccable/live/sessions/
+.impeccable/live/roots.json
+.impeccable/live/inject-journal.json
+.playwright-mcp/

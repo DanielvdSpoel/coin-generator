@@ -1,0 +1,6 @@
+{
+  "files": ["design/mockups/*.html"],
+  "insertBefore": "</body>",
+  "commentSyntax": "html",
+  "cspChecked": true
+}
