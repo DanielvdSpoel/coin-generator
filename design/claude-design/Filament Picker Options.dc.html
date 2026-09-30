@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;display=swap" rel="stylesheet">
+<style>body{margin:0;background:#ecedeb;font-family:'Archivo',system-ui,sans-serif;color:#141414}a{color:#141414}a:hover{color:#000}*{box-sizing:border-box}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 'Archivo',system-ui,sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 'Archivo',system-ui,sans-serif;color:rgba(0,0,0,.6)}.dv-card{max-width:100%;background:#ecedeb;border:1px solid #c9cbc6;overflow:hidden}.dv-opt:target .dv-oid{background:#141414;color:#fff}.dv-next{margin:26px 0 0;font:12px/1.5 'Archivo',system-ui,sans-serif;color:rgba(0,0,0,.55)}</style>
+</helmet>
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Filament picker · brand → type → colour</span></div>
+  <p style="margin:0 0 24px;max-width:72ch;color:#5c5f5a;font-size:13px;line-height:1.5;text-wrap:pretty">Three ways to pick a filament for the enamel or metal. All three are working mockups on the same sample catalogue (5 brands, 14 types, colour values approximate). Each shows how it sits in the 400 px settings panel.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="1a">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Three-column popover · see brand, type and colour at once</div>
+      <div class="dv-card" style="width:720px;font-size:13px;line-height:1.45">
+        <div style="padding:16px 18px 12px;display:grid;gap:8px;border-bottom:1px solid #c9cbc6">
+          <span style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5c5f5a">Enamel colour · front</span>
+          <div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;background:#fff;border:1px solid #141414;padding:8px 10px;width:352px">
+            <span style="width:24px;height:24px;background:{{ a.sel.hex }};border:1px solid rgba(0,0,0,.18)"></span>
+            <span style="display:grid;line-height:1.25;min-width:0"><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.sel.color }}</span><span style="color:#5c5f5a;font-size:12px">{{ a.sel.brand }} · {{ a.sel.type }}</span></span>
+            <span style="width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-135deg) translateY(-2px)"></span>
+          </div>
+        </div>
+        <div style="background:#fff;margin:10px 18px 18px;border:1px solid #141414">
+          <div style="padding:10px 12px;border-bottom:1px solid #d5d7d2">
+            <input type="text" value="{{ a.q }}" onChange="{{ a.onQ }}" placeholder="Search all filaments…" style="font:inherit;width:100%;border:0;border-bottom:1px solid #c9cbc6;padding:6px 0;outline:none;background:transparent" style-focus="border-bottom-color:#141414">
+          </div>
+          <div style="display:grid;grid-template-columns:150px 170px minmax(0,1fr);height:300px">
+            <div style="border-right:1px solid #d5d7d2;overflow:auto;padding:6px 0">
+              <span style="display:block;padding:4px 12px 6px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5c5f5a">Brand</span>
+              <sc-for list="{{ a.brands }}" as="b" hint-placeholder-count="5">
+                <button type="button" onClick="{{ b.onClick }}" style="font:inherit;width:100%;display:flex;justify-content:space-between;gap:8px;padding:7px 12px;border:0;background:{{ b.bg }};color:{{ b.fg }};cursor:pointer;text-align:left"><span>{{ b.name }}</span><span style="opacity:0.6">{{ b.count }}</span></button>
+              </sc-for>
+            </div>
+            <div style="border-right:1px solid #d5d7d2;overflow:auto;padding:6px 0">
+              <span style="display:block;padding:4px 12px 6px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5c5f5a">Type</span>
+              <sc-for list="{{ a.types }}" as="t" hint-placeholder-count="4">
+                <button type="button" onClick="{{ t.onClick }}" style="font:inherit;width:100%;display:grid;gap:4px;padding:7px 12px;border:0;background:{{ t.bg }};color:{{ t.fg }};cursor:pointer;text-align:left">
+                  <span style="display:flex;justify-content:space-between"><span>{{ t.name }}</span><span style="opacity:0.6">{{ t.count }}</span></span>
+                  <span style="display:flex;gap:2px"><sc-for list="{{ t.strip }}" as="s" hint-placeholder-count="6"><span style="width:12px;height:6px;background:{{ s }}"></span></sc-for></span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="overflow:auto;padding:6px 12px 12px">
+              <span style="display:block;padding:4px 0 8px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5c5f5a">{{ a.colorTitle }}</span>
+              <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 8px">
+                <sc-for list="{{ a.colors }}" as="c" hint-placeholder-count="8">
+                  <button type="button" onClick="{{ c.onClick }}" title="{{ c.full }}" style="font:inherit;font-size:11px;border:0;background:none;padding:0;cursor:pointer;display:grid;gap:4px;justify-items:center;text-align:center;color:#141414">
+                    <span style="width:44px;height:44px;background:{{ c.hex }};border:1px solid rgba(0,0,0,.18);outline:2px solid {{ c.ring }};outline-offset:2px"></span>
+                    <span style="line-height:1.2">{{ c.name }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border-top:1px solid #d5d7d2;background:#ecedeb">
+            <span style="color:#5c5f5a;font-size:12px">{{ a.sel.full }} · {{ a.sel.hex }}{{ a.sel.src }}</span>
+            <span style="font-size:12px;color:#5c5f5a">Esc to close</span>
+          </div>
+        </div>
+      </div>
+      <span style="max-width:720px;color:#5c5f5a;font-size:12px;text-wrap:pretty">Most like a slicer's filament dialog. Fast when you know the brand; the type column shows a colour strip so you can scan without clicking. Needs a popover wider than the panel.</span>
+    </div>
+
+    <div class="dv-opt" id="1b">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Search first · filter chips, grouped results</div>
+      <div class="dv-card" style="width:400px;font-size:13px;line-height:1.45;padding:16px 24px 20px;display:grid;gap:12px">
+        <span style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5c5f5a">Enamel colour · front</span>
+        <div style="display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:center;background:#fff;border:1px solid #c9cbc6;padding:8px 10px">
+          <span style="width:24px;height:24px;background:{{ b.sel.hex }};border:1px solid rgba(0,0,0,.18)"></span>
+          <span style="display:grid;line-height:1.25"><span style="font-weight:600">{{ b.sel.color }}</span><span style="color:#5c5f5a;font-size:12px">{{ b.sel.brand }} · {{ b.sel.type }}{{ b.sel.src }}</span></span>
+        </div>
+        <input type="text" value="{{ b.q }}" onChange="{{ b.onQ }}" placeholder="Try “matte blue” or “silk gold”" style="font:inherit;font-size:14px;width:100%;border:1px solid #c9cbc6;background:#fff;padding:8px 10px;outline:none" style-focus="border-color:#141414">
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ b.brandChips }}" as="c" hint-placeholder-count="6">
+            <button type="button" onClick="{{ c.onClick }}" style="font:inherit;font-size:12px;padding:3px 9px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ b.typeChips }}" as="c" hint-placeholder-count="5">
+            <button type="button" onClick="{{ c.onClick }}" style="font:inherit;font-size:12px;padding:3px 9px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+          </sc-for>
+        </div>
+        <div style="background:#fff;border:1px solid #c9cbc6;height:330px;overflow:auto">
+          <sc-for list="{{ b.groups }}" as="g" hint-placeholder-count="3">
+            <div>
+              <div style="position:sticky;top:0;background:#ecedeb;padding:5px 10px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#5c5f5a;border-bottom:1px solid #d5d7d2;display:flex;justify-content:space-between"><span>{{ g.title }}</span><span>{{ g.count }}</span></div>
+              <sc-for list="{{ g.items }}" as="c" hint-placeholder-count="4">
+                <button type="button" onClick="{{ c.onClick }}" style="font:inherit;width:100%;display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 10px;border:0;border-bottom:1px solid #ecedeb;background:{{ c.bg }};cursor:pointer;text-align:left;color:#141414" style-hover="background:#f4f4f2">
+                  <span style="width:20px;height:20px;background:{{ c.hex }};border:1px solid rgba(0,0,0,.18)"></span>
+                  <span>{{ c.name }}</span>
+                  <span style="color:#5c5f5a;font-size:11px">{{ c.mark }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-for>
+          <sc-if value="{{ b.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:16px 12px;color:#5c5f5a">No filament matches. Try fewer words.</div></sc-if>
+        </div>
+      </div>
+      <span style="max-width:400px;color:#5c5f5a;font-size:12px;text-wrap:pretty">Fits in the panel, no popover. Best for thousands of filaments: type what you want, narrow with chips. Recently used sit on top when the search is empty.</span>
+    </div>
+
+    <div class="dv-opt" id="1c">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Drill-down in the panel · one step at a time</div>
+      <div class="dv-card" style="width:400px;font-size:13px;line-height:1.45;padding:16px 24px 20px;display:grid;gap:12px">
+        <span style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5c5f5a">Enamel colour · front</span>
+        <div style="display:grid;gap:6px">
+          <span style="color:#5c5f5a;font-size:12px">Recently used</span>
+          <div style="display:flex;gap:6px">
+            <sc-for list="{{ c.recent }}" as="r" hint-placeholder-count="3">
+              <button type="button" onClick="{{ r.onClick }}" title="{{ r.full }}" style="width:30px;height:30px;padding:0;background:{{ r.hex }};border:1px solid rgba(0,0,0,.18);outline:2px solid {{ r.ring }};outline-offset:2px;cursor:pointer"></button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;padding-top:6px;border-top:1px solid #d5d7d2">
+          <sc-for list="{{ c.crumbs }}" as="k" hint-placeholder-count="3">
+            <span style="display:inline-flex;gap:6px;align-items:baseline"><sc-if value="{{ k.sep }}" hint-placeholder-val="{{ false }}"><span style="color:#c9cbc6">›</span></sc-if><button type="button" onClick="{{ k.onClick }}" style="font:inherit;background:none;border:0;padding:0;cursor:pointer;color:#141414;font-weight:{{ k.weight }};text-decoration:{{ k.deco }};text-decoration-color:#c9cbc6;text-underline-offset:0.18em">{{ k.label }}</button></span>
+          </sc-for>
+        </div>
+        <div style="background:#fff;border:1px solid #c9cbc6;min-height:330px">
+          <sc-if value="{{ c.isBrand }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ c.brands }}" as="b" hint-placeholder-count="5">
+              <button type="button" onClick="{{ b.onClick }}" style="font:inherit;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:12px;border:0;border-bottom:1px solid #ecedeb;background:#fff;cursor:pointer;text-align:left;color:#141414" style-hover="background:#f4f4f2">
+                <span style="display:grid"><span style="font-weight:600">{{ b.name }}</span><span style="color:#5c5f5a;font-size:12px">{{ b.sub }}</span></span>
+                <span style="display:flex;gap:2px"><sc-for list="{{ b.strip }}" as="s" hint-placeholder-count="5"><span style="width:10px;height:18px;background:{{ s }}"></span></sc-for></span>
+                <span style="width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg)"></span>
+              </button>
+            </sc-for>
+          </sc-if>
+          <sc-if value="{{ c.isType }}" hint-placeholder-val="{{ false }}">
+            <sc-for list="{{ c.types }}" as="t" hint-placeholder-count="4">
+              <button type="button" onClick="{{ t.onClick }}" style="font:inherit;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:0;border-bottom:1px solid #ecedeb;background:#fff;cursor:pointer;text-align:left;color:#141414" style-hover="background:#f4f4f2">
+                <span style="display:grid;gap:6px"><span style="display:flex;gap:8px;align-items:baseline"><span style="font-weight:600">{{ t.name }}</span><span style="color:#5c5f5a;font-size:12px">{{ t.desc }}</span></span>
+                  <span style="display:flex;gap:2px"><sc-for list="{{ t.strip }}" as="s" hint-placeholder-count="8"><span style="width:18px;height:10px;background:{{ s }}"></span></sc-for></span></span>
+                <span style="width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg)"></span>
+              </button>
+            </sc-for>
+          </sc-if>
+          <sc-if value="{{ c.isColor }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px">
+              <sc-for list="{{ c.colors }}" as="x" hint-placeholder-count="6">
+                <button type="button" onClick="{{ x.onClick }}" style="font:inherit;font-size:12px;border:1px solid {{ x.border }};background:#fff;padding:0 0 6px;cursor:pointer;display:grid;gap:6px;text-align:left;color:#141414">
+                  <span style="height:52px;background:{{ x.hex }}"></span>
+                  <span style="padding:0 7px;display:grid;line-height:1.25"><span>{{ x.name }}</span><span style="color:#5c5f5a;font-size:11px">{{ x.mark }}</span></span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;align-items:center">
+          <span style="width:20px;height:20px;background:{{ c.sel.hex }};border:1px solid rgba(0,0,0,.18)"></span>
+          <span style="color:#5c5f5a;font-size:12px">Using {{ c.sel.full }}{{ c.sel.src }}</span>
+        </div>
+      </div>
+      <span style="max-width:400px;color:#5c5f5a;font-size:12px;text-wrap:pretty">Friendliest for someone who has never bought filament: one question per step, big swatches at the end. Slower for experts; pairs well with a search field on top.</span>
+    </div>
+  </div>
+  <p class="dv-next">Try next: "combine <a class="dv-oid" href="#1b">1b</a> search with the <a class="dv-oid" href="#1c">1c</a> swatch grid" · "put <a class="dv-oid" href="#1a">1a</a> into the designer" · "add a 'my filaments' shelf"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const RAW={
+ 'Bambu Lab':{'PLA Basic':['Basic',[['Black','#141414',1],['Jade White','#E8E6DA'],['Blue','#0A2989',1],['Red','#C12E1F'],['Gold','#E4BD68'],['Silver','#A6A9AA'],['Bambu Green','#00AE42'],['Orange','#F0781E']]],
+  'PLA Matte':['Matte',[['Dark Blue','#395064',1],['Charcoal','#333333'],['Ivory White','#F0EDE4'],['Dark Red','#7B2D2B'],['Dark Green','#2F4B3B'],['Desert Tan','#C8B18B'],['Marine Blue','#1E5F8C']]],
+  'PLA Silk+':['Silk',[['Gold','#DCA256',1],['Silver','#B9C0C4',1],['Copper','#B5714A'],['Titan Gray','#5E6468'],['Candy Red','#B3262E']]],
+  'PETG HF':['PETG',[['Black','#1A1A1A'],['White','#EFEFEA'],['Blue','#1F4E9A'],['Green','#2E7D4F']]]},
+ 'Prusament':{'PLA':['Basic',[['Galaxy Black','#222326'],['Jet Black','#161616'],['Azure Blue','#2D6DB5'],['Lipstick Red','#B11F2C'],['Pristine White','#EFEFEA'],['Gentleman\'s Grey','#56595C']]],
+  'PETG':['PETG',[['Jet Black','#171717'],['Urban Grey','#7D8084'],['Ultramarine Blue','#2742A8'],['Signal White','#F1F0EA']]]},
+ 'Polymaker':{'PolyTerra PLA':['Matte',[['Charcoal Black','#2B2B2B'],['Cotton White','#EDEBE3'],['Army Blue','#3A4F63'],['Forest Green','#3C5A40'],['Muted Red','#8E3B36'],['Sand','#C9B79A']]],
+  'PolyLite Silk':['Silk',[['Gold','#D4A04C'],['Silver','#B8BDC0'],['Bronze','#9A6B3D'],['Copper','#B0683E']]]},
+ 'eSun':{'PLA+':['Basic',[['Black','#1C1C1C'],['White','#F0EFEA'],['Blue','#1D4A9A'],['Fire Engine Red','#C2272D'],['Grey','#8A8D8F']]],
+  'Silk PLA':['Silk',[['Gold','#D6A24D'],['Copper','#B06B45'],['Silver','#BFC3C6']]]},
+ 'Elegoo':{'PLA':['Basic',[['Black','#1B1B1B'],['White','#F1F0EB'],['Blue','#1F58A8'],['Red','#C23030']]],
+  'PLA Matte':['Matte',[['Black','#2A2A2A'],['Ruby Red','#7C2A30'],['Dark Blue','#33475C']]]}
+};
+const FIL=[]; const TYPES=[];
+for(const brand of Object.keys(RAW)) for(const type of Object.keys(RAW[brand])){ const [finish,cols]=RAW[brand][type]; TYPES.push({brand,type,finish}); for(const [color,hex,m] of cols) FIL.push({id:`${brand}|${type}|${color}`,brand,type,finish,color,hex,measured:!!m}); }
+const BRANDS=Object.keys(RAW);
+const FINISH_DESC={Basic:'glossy, everyday',Matte:'no shine, hides layers',Silk:'metallic sheen',PETG:'tougher, slight gloss'};
+const byId=id=>FIL.find(f=>f.id===id)||FIL[0];
+const DEF='Bambu Lab|PLA Matte|Dark Blue';
+const INK='#141414', HAIR='#c9cbc6';
+const match=(f,q)=>q.toLowerCase().split(/\s+/).filter(Boolean).every(t=>`${f.brand} ${f.type} ${f.finish} ${f.color}`.toLowerCase().includes(t));
+const selView=f=>({hex:f.hex,color:f.color,brand:f.brand,type:f.type,full:`${f.brand} ${f.type} ${f.color}`,src:f.measured?' · measured':''});
+
+class Component extends DCLogic {
+  state={
+    a:{sel:DEF,brand:'Bambu Lab',type:'PLA Matte',q:''},
+    b:{sel:DEF,q:'',brand:null,finish:null,recent:[DEF,'Bambu Lab|PLA Silk+|Gold','Bambu Lab|PLA Basic|Black']},
+    c:{sel:DEF,step:'brand',brand:null,type:null,recent:[DEF,'Bambu Lab|PLA Silk+|Gold','Bambu Lab|PLA Basic|Black']}
+  };
+  set(k,patch){ this.setState(s=>({[k]:Object.assign({},s[k],patch)})); }
+  pick(k,id){ this.setState(s=>{ const o=Object.assign({},s[k],{sel:id}); if(o.recent) o.recent=[id].concat(o.recent.filter(r=>r!==id)).slice(0,6); return {[k]:o}; }); }
+  renderVals(){
+    const {a,b,c}=this.state;
+    // 1a
+    const aq=a.q.trim(), aPool=aq?FIL.filter(f=>match(f,aq)):FIL;
+    const aBrands=BRANDS.map(n=>({name:n,count:aPool.filter(f=>f.brand===n).length})).filter(x=>x.count).map(x=>({...x,bg:x.name===a.brand?INK:'transparent',fg:x.name===a.brand?'#fff':INK,onClick:()=>this.set('a',{brand:x.name,type:null})}));
+    const aBrand=aBrands.find(x=>x.name===a.brand)?a.brand:(aBrands[0]&&aBrands[0].name);
+    const aTypesRaw=TYPES.filter(t=>t.brand===aBrand).map(t=>({t,cols:aPool.filter(f=>f.brand===aBrand&&f.type===t.type)})).filter(x=>x.cols.length);
+    const aType=aTypesRaw.find(x=>x.t.type===a.type)?a.type:(aTypesRaw[0]&&aTypesRaw[0].t.type);
+    const aTypes=aTypesRaw.map(x=>({name:x.t.type,count:x.cols.length,strip:x.cols.slice(0,8).map(f=>f.hex),bg:x.t.type===aType?'#ecedeb':'transparent',fg:INK,onClick:()=>this.set('a',{brand:aBrand,type:x.t.type})}));
+    const aCols=aPool.filter(f=>f.brand===aBrand&&f.type===aType).map(f=>({name:f.color,hex:f.hex,full:`${f.brand} ${f.type} ${f.color} · ${f.hex}`,ring:f.id===a.sel?INK:'transparent',onClick:()=>this.pick('a',f.id)}));
+    // 1b
+    const bq=b.q.trim();
+    let bPool=FIL.filter(f=>(!b.brand||f.brand===b.brand)&&(!b.finish||f.finish===b.finish)&&(!bq||match(f,bq)));
+    const chip=(label,on,fn)=>({label,border:on?INK:HAIR,bg:on?INK:'#fff',fg:on?'#fff':INK,onClick:fn});
+    const groups=[];
+    if(!bq&&!b.brand&&!b.finish) groups.push({title:'Recently used',items:b.recent.map(byId)});
+    const gm={}; for(const f of bPool){ const k=`${f.brand} · ${f.type}`; (gm[k]=gm[k]||[]).push(f); }
+    for(const k of Object.keys(gm)) groups.push({title:k,items:gm[k]});
+    const bGroups=groups.map(g=>({title:g.title,count:g.items.length,items:g.items.map(f=>({name:g.title==='Recently used'?`${f.brand} ${f.type} ${f.color}`:f.color,hex:f.hex,mark:f.id===b.sel?'✓ in use':(f.measured?'measured':''),bg:f.id===b.sel?'#ecedeb':'#fff',onClick:()=>this.pick('b',f.id)}))}));
+    // 1c
+    const cb=c.brand, ct=c.type;
+    const crumbs=[{label:'All brands',onClick:()=>this.set('c',{step:'brand',brand:null,type:null})}];
+    if(cb) crumbs.push({label:cb,onClick:()=>this.set('c',{step:'type',type:null})});
+    if(ct) crumbs.push({label:ct,onClick:()=>{}});
+    return {
+      a:{q:a.q,onQ:e=>this.set('a',{q:e.target.value}),brands:aBrands,types:aTypes,colors:aCols,colorTitle:aType?`${aType} · ${aCols.length} colours`:'No match',sel:selView(byId(a.sel))},
+      b:{q:b.q,onQ:e=>this.set('b',{q:e.target.value}),
+        brandChips:[chip('All brands',!b.brand,()=>this.set('b',{brand:null}))].concat(BRANDS.map(n=>chip(n,b.brand===n,()=>this.set('b',{brand:b.brand===n?null:n})))),
+        typeChips:[chip('Any finish',!b.finish,()=>this.set('b',{finish:null}))].concat(['Basic','Matte','Silk','PETG'].map(n=>chip(n,b.finish===n,()=>this.set('b',{finish:b.finish===n?null:n})))),
+        groups:bGroups,empty:!bGroups.length,sel:selView(byId(b.sel))},
+      c:{recent:c.recent.map(id=>{const f=byId(id); return {hex:f.hex,full:`${f.brand} ${f.type} ${f.color}`,ring:id===c.sel?INK:'transparent',onClick:()=>this.pick('c',id)};}),
+        crumbs:crumbs.map((k,i)=>({...k,sep:i>0,weight:i===crumbs.length-1?600:400,deco:i===crumbs.length-1?'none':'underline'})),
+        isBrand:c.step==='brand',isType:c.step==='type',isColor:c.step==='color',
+        brands:BRANDS.map(n=>{const fs=FIL.filter(f=>f.brand===n); return {name:n,sub:`${TYPES.filter(t=>t.brand===n).length} types · ${fs.length} colours`,strip:fs.filter((_,i)=>i%3===0).slice(0,5).map(f=>f.hex),onClick:()=>this.set('c',{step:'type',brand:n,type:null})};}),
+        types:TYPES.filter(t=>t.brand===cb).map(t=>({name:t.type,desc:FINISH_DESC[t.finish],strip:FIL.filter(f=>f.brand===cb&&f.type===t.type).map(f=>f.hex),onClick:()=>this.set('c',{step:'color',type:t.type})})),
+        colors:FIL.filter(f=>f.brand===cb&&f.type===ct).map(f=>({name:f.color,hex:f.hex,mark:f.id===c.sel?'✓ in use':(f.measured?'measured':f.hex),border:f.id===c.sel?INK:'#d5d7d2',onClick:()=>this.pick('c',f.id)})),
+        sel:selView(byId(c.sel))}
+    };
+  }
+}
+</script>
+</body>
+</html>

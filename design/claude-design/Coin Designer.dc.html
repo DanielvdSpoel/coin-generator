@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Coin Designer · Daniel van der Spoel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=Poppins:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:#ecedeb;color:#141414}
+a{color:#141414;text-decoration-color:#c9cbc6;text-underline-offset:0.18em}
+a:hover{color:#000;text-decoration-color:#141414}
+::selection{background:#141414;color:#fff}
+:focus-visible{outline:2px solid #141414;outline-offset:2px}
+input[type=number]::-webkit-inner-spin-button{opacity:0.4}
+summary::-webkit-details-marker{display:none}
+details[open]>summary [data-chev]{transform:rotate(45deg) !important}
+</style>
+</helmet>
+<div data-screen-label="Designer" style="font-family:'Archivo',system-ui,sans-serif;font-size:13px;line-height:1.45;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;color:#141414;background:#ecedeb;height:100vh;display:grid;grid-template-rows:auto minmax(0,1fr)">
+
+  <header style="display:grid;grid-template-columns:minmax(100px,max-content) minmax(180px,1fr) auto;align-items:center;gap:16px;padding:10px 20px 10px 24px;border-bottom:1px solid #c9cbc6;position:relative;z-index:5">
+    <div style="display:flex;align-items:baseline;gap:8px;white-space:nowrap;min-width:0;max-width:280px;overflow:hidden">
+      <span style="font-weight:600;letter-spacing:0.02em;flex-shrink:0">Coin Designer</span>
+      <span style="color:#5c5f5a;overflow:hidden;text-overflow:ellipsis;min-width:0;display:inline-block;white-space:nowrap;flex:0 1 auto;max-width:max(0px, calc(100vw - 1180px) * 100)">by Daniel van der Spoel</span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;min-width:0">
+      <input type="text" value="{{ name }}" onChange="{{ onName }}" aria-label="Design name" style="font:inherit;font-size:16px;font-weight:600;border:0;border-bottom:1px solid transparent;background:transparent;padding:4px 2px;width:300px;min-width:0;max-width:100%;text-align:center;color:#141414;outline:none" style-hover="border-bottom-color:#c9cbc6" style-focus="border-bottom-color:#141414">
+    </div>
+    <nav style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+      <button type="button" onClick="{{ onUndo }}" disabled="{{ undoDisabled }}" title="Undo (Ctrl+Z)" style="font:inherit;color:#141414;background:transparent;border:1px solid transparent;padding:7px 9px;cursor:pointer;white-space:nowrap;opacity:{{ undoOp }}" style-hover="border-color:#c9cbc6">Undo</button>
+      <button type="button" onClick="{{ onRedo }}" disabled="{{ redoDisabled }}" title="Redo (Ctrl+Shift+Z)" style="font:inherit;color:#141414;background:transparent;border:1px solid transparent;padding:7px 9px;cursor:pointer;white-space:nowrap;opacity:{{ redoOp }}" style-hover="border-color:#c9cbc6">Redo</button>
+      
+      <button type="button" onClick="{{ onTemplates }}" style="font:inherit;color:#141414;background:transparent;border:1px solid transparent;padding:7px 9px;cursor:pointer;white-space:nowrap" style-hover="border-color:#c9cbc6">Templates</button>
+      <button type="button" onClick="{{ onOpen }}" style="font:inherit;color:#141414;background:transparent;border:1px solid transparent;padding:7px 9px;cursor:pointer;white-space:nowrap" style-hover="border-color:#c9cbc6">Open file</button>
+      <button type="button" onClick="{{ onSave }}" title="{{ fileName }}" style="font:inherit;color:#141414;background:transparent;border:1px solid transparent;padding:7px 9px;cursor:pointer;white-space:nowrap" style-hover="border-color:#c9cbc6">Save file</button>
+      
+      <div data-dl="" style="position:relative">
+        <button type="button" onClick="{{ onDlToggle }}" aria-expanded="{{ dlOpen }}" style="font:inherit;color:#141414;background:#fff;border:1px solid #141414;padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;white-space:nowrap">{{ dlLabel }}<sc-if value="{{ hasWarn }}" hint-placeholder-val="{{ false }}"><span title="Things to check before printing" style="font-size:12px">⚑ {{ warnCount }}</span></sc-if><span style="width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:translateY(-2px) rotate(45deg)"></span></button>
+        <sc-if value="{{ dlOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;right:0;top:calc(100% + 6px);width:340px;max-height:calc(100vh - 80px);overflow:auto;background:#fff;border:1px solid #141414;display:grid;z-index:20">
+            <div style="padding:12px 14px;background:#ecedeb;border-bottom:1px solid #141414;display:grid;gap:4px">
+              <strong style="font-weight:600">{{ warnTitle }}</strong>
+              <sc-if value="{{ noWarnings }}" hint-placeholder-val="{{ true }}"><span style="color:#5c5f5a;font-size:12px">✓ Nothing to fix for a {{ nozzleLabel }} nozzle. Pick a file type below.</span></sc-if>
+              <sc-for list="{{ warnings }}" as="w" hint-placeholder-count="0">
+                <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;padding:8px 0 2px;border-top:1px solid {{ w.border }}">
+                  <span>⚑</span>
+                  <div style="display:grid;gap:4px">
+                    <span style="text-wrap:pretty"><strong style="font-weight:600">{{ w.where }}.</strong> {{ w.msg }}</span>
+                    <div style="display:flex;gap:14px;align-items:baseline">
+                      <button type="button" onClick="{{ w.onFix }}" style="font:inherit;font-weight:600;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#5c5f5a;text-underline-offset:0.18em;color:#141414">{{ w.fixLabel }}</button>
+                      <button type="button" onClick="{{ w.onAck }}" style="font:inherit;font-size:12px;background:none;border:0;padding:0;cursor:pointer;color:#5c5f5a;text-decoration:underline;text-decoration-color:#c9cbc6;text-underline-offset:0.18em">Keep as is</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <sc-for list="{{ dlItems }}" as="d" hint-placeholder-count="3">
+              <button type="button" onClick="{{ d.onClick }}" style="font:inherit;color:#141414;background:#fff;border:0;border-top:1px solid {{ d.border }};padding:11px 14px;text-align:left;display:grid;gap:2px;cursor:pointer" style-hover="background:#ecedeb">
+                <strong style="font-weight:600">{{ d.label }}</strong>
+                <span style="color:#5c5f5a;font-size:12px">{{ d.desc }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <button type="button" onClick="{{ onRequest }}" style="font:inherit;color:#fff;background:#141414;border:1px solid #141414;padding:8px 14px;cursor:pointer;white-space:nowrap;margin-left:6px" style-hover="background:#000"><strong style="font-weight:600">Request a print</strong></button>
+    </nav>
+  </header>
+
+  <main style="display:grid;grid-template-columns:400px minmax(0,1fr);min-height:0">
+
+    <aside aria-label="Settings" style="border-right:1px solid #c9cbc6;overflow:auto;min-height:0;scrollbar-width:thin;scrollbar-color:#c9cbc6 transparent">
+      <div style="position:sticky;top:0;z-index:2;background:#ecedeb;padding:16px 24px 14px;border-bottom:1px solid #c9cbc6;display:grid;gap:2px">
+        <h2 style="margin:0;font-size:16px;font-weight:600">{{ panelTitle }}</h2>
+        <span style="color:#5c5f5a;font-size:12px">{{ tabHint }}</span>
+      </div>
+
+      <sc-if value="{{ isFace }}" hint-placeholder-val="{{ true }}">
+        <details open="{{ true }}" style="border-bottom:1px solid #d5d7d2"><summary style="list-style:none;cursor:pointer;padding:16px 24px;display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:600;user-select:none" style-hover="background:#e4e5e2"><span style="font-size:11px;letter-spacing:0.14em;color:#5c5f5a;font-weight:400">01</span>Inscription<span data-chev="" style="margin-left:auto;width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg);align-self:center"></span></summary><div style="padding:2px 24px 22px;display:grid;gap:16px">
+          <div style="display:grid;gap:10px">
+            <label style="display:grid;gap:6px">
+              <span style="display:flex;justify-content:space-between;color:#5c5f5a"><span>Top text</span><span>{{ f.topCount }}</span></span>
+              <input type="text" maxlength="40" value="{{ f.topText }}" onChange="{{ f.onTopText }}" placeholder="e.g. NORTHERN ANALYSIS UNIT" style="font:inherit;font-size:15px;padding:9px 10px;border:1px solid #c9cbc6;background:#fff;color:#141414;outline:none;width:100%" style-focus="border-color:#141414">
+            </label>
+            <sc-for list="{{ f.topCtrls }}" as="c" hint-placeholder-count="2">
+              <div style="display:grid;grid-template-columns:76px minmax(0,1fr) 76px;gap:12px;align-items:center;opacity:{{ c.op }}">
+                <span style="color:#5c5f5a">{{ c.label }}</span>
+                <input type="range" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" disabled="{{ c.disabled }}" onChange="{{ c.onRange }}" aria-label="{{ c.label }}" style="width:100%;accent-color:#141414;margin:0">
+                <label style="display:flex;align-items:baseline;gap:4px;border-bottom:1px solid #c9cbc6;padding:3px 0"><input type="number" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" disabled="{{ c.disabled }}" onChange="{{ c.onNum }}" onBlur="{{ c.onBlur }}" aria-label="{{ c.label }}" style="width:100%;min-width:0;border:0;background:transparent;font:inherit;color:#141414;text-align:right;padding:0;outline:none"><span style="color:#5c5f5a;font-size:12px;min-width:18px">{{ c.unit }}</span></label>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:grid;gap:10px;padding-top:4px">
+            <label style="display:grid;gap:6px">
+              <span style="display:flex;justify-content:space-between;color:#5c5f5a"><span>Bottom text</span><span>{{ f.bottomCount }}</span></span>
+              <input type="text" maxlength="40" value="{{ f.bottomText }}" onChange="{{ f.onBottomText }}" placeholder="e.g. Est. 2021" style="font:inherit;font-size:15px;padding:9px 10px;border:1px solid #c9cbc6;background:#fff;color:#141414;outline:none;width:100%" style-focus="border-color:#141414">
+            </label>
+            <sc-for list="{{ f.bottomCtrls }}" as="c" hint-placeholder-count="2">
+              <div style="display:grid;grid-template-columns:76px minmax(0,1fr) 76px;gap:12px;align-items:center;opacity:{{ c.op }}">
+                <span style="color:#5c5f5a">{{ c.label }}</span>
+                <input type="range" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" disabled="{{ c.disabled }}" onChange="{{ c.onRange }}" aria-label="{{ c.label }}" style="width:100%;accent-color:#141414;margin:0">
+                <label style="display:flex;align-items:baseline;gap:4px;border-bottom:1px solid #c9cbc6;padding:3px 0"><input type="number" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" disabled="{{ c.disabled }}" onChange="{{ c.onNum }}" onBlur="{{ c.onBlur }}" aria-label="{{ c.label }}" style="width:100%;min-width:0;border:0;background:transparent;font:inherit;color:#141414;text-align:right;padding:0;outline:none"><span style="color:#5c5f5a;font-size:12px;min-width:18px">{{ c.unit }}</span></label>
+              </div>
+            </sc-for>
+          </div>
+          <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" checked="{{ f.dotsOn }}" onChange="{{ f.onDots }}" style="accent-color:#141414;margin:0"><span>Separator dots between the two texts</span></label>
+        </div></details>
+
+        <details open="{{ true }}" style="border-bottom:1px solid #d5d7d2"><summary style="list-style:none;cursor:pointer;padding:16px 24px;display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:600;user-select:none" style-hover="background:#e4e5e2"><span style="font-size:11px;letter-spacing:0.14em;color:#5c5f5a;font-weight:400">02</span>Emblem<span data-chev="" style="margin-left:auto;width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg);align-self:center"></span></summary><div style="padding:2px 24px 22px;display:grid;gap:14px">
+          <sc-if value="{{ f.hasIcon }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;background:#fff;border:1px solid #c9cbc6;padding:8px 10px 8px 8px">
+              <div style="width:52px;height:52px;background:{{ f.enamelHex }};display:grid;place-items:center"><img src="{{ f.iconThumb }}" alt="" style="width:40px;height:40px;object-fit:contain;display:block"></div>
+              <div style="display:grid;gap:1px;min-width:0"><span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.iconName }}</span><span style="color:#5c5f5a;font-size:12px">{{ f.iconKind }}</span></div>
+              <div style="display:flex;gap:12px"><button type="button" onClick="{{ onUploadClick }}" style="font:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#c9cbc6;text-underline-offset:0.18em;color:#141414">Replace</button><button type="button" onClick="{{ f.onRemoveIcon }}" style="font:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#c9cbc6;text-underline-offset:0.18em;color:#5c5f5a">Remove</button></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ f.noIcon }}" hint-placeholder-val="{{ false }}">
+            <div onDragOver="{{ onDragOver }}" onDrop="{{ onDrop }}" style="border:1px dashed #5c5f5a;background:#fff;padding:22px 16px;display:grid;gap:8px;justify-items:center;text-align:center">
+              <button type="button" onClick="{{ onUploadClick }}" style="font:inherit;color:#141414;background:#fff;border:1px solid #141414;padding:8px 14px;cursor:pointer">Upload a logo</button>
+              <span style="color:#5c5f5a;font-size:12px">or drop it here · PNG, JPG or SVG, up to 10 MB</span>
+              <button type="button" onClick="{{ f.onUseBuiltin }}" style="font:inherit;font-size:12px;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#c9cbc6;text-underline-offset:0.18em;color:#5c5f5a">Use the placeholder mark</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ f.isUpload }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;gap:10px;padding:12px;border:1px solid #d5d7d2">
+              <span style="color:#5c5f5a;font-size:12px;text-wrap:pretty">Dark parts of your image become raised metal. Move the threshold until the outline looks clean.</span>
+              <sc-for list="{{ f.traceCtrls }}" as="c" hint-placeholder-count="1">
+                <div style="display:grid;grid-template-columns:76px minmax(0,1fr) 76px;gap:12px;align-items:center">
+                  <span style="color:#5c5f5a">{{ c.label }}</span>
+                  <input type="range" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" onChange="{{ c.onRange }}" aria-label="{{ c.label }}" style="width:100%;accent-color:#141414;margin:0">
+                  <label style="display:flex;align-items:baseline;gap:4px;border-bottom:1px solid #c9cbc6;padding:3px 0"><input type="number" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" onChange="{{ c.onNum }}" onBlur="{{ c.onBlur }}" aria-label="{{ c.label }}" style="width:100%;min-width:0;border:0;background:transparent;font:inherit;color:#141414;text-align:right;padding:0;outline:none"><span style="color:#5c5f5a;font-size:12px;min-width:18px">{{ c.unit }}</span></label>
+                </div>
+              </sc-for>
+              <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" checked="{{ f.invert }}" onChange="{{ f.onInvert }}" style="accent-color:#141414;margin:0"><span>Invert · raise the light parts instead</span></label>
+            </div>
+          </sc-if>
+          <sc-if value="{{ f.hasIcon }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;gap:10px">
+              <sc-for list="{{ f.iconCtrls }}" as="c" hint-placeholder-count="4">
+                <div style="display:grid;grid-template-columns:76px minmax(0,1fr) 76px;gap:12px;align-items:center">
+                  <span style="color:#5c5f5a">{{ c.label }}</span>
+                  <input type="range" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" onChange="{{ c.onRange }}" aria-label="{{ c.label }}" style="width:100%;accent-color:#141414;margin:0">
+                  <label style="display:flex;align-items:baseline;gap:4px;border-bottom:1px solid #c9cbc6;padding:3px 0"><input type="number" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" onChange="{{ c.onNum }}" onBlur="{{ c.onBlur }}" aria-label="{{ c.label }}" style="width:100%;min-width:0;border:0;background:transparent;font:inherit;color:#141414;text-align:right;padding:0;outline:none"><span style="color:#5c5f5a;font-size:12px;min-width:18px">{{ c.unit }}</span></label>
+                </div>
+              </sc-for>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+                <span style="color:#5c5f5a;font-size:12px">Or click the emblem on the coin and use its handles.</span>
+                <button type="button" onClick="{{ f.onCenter }}" style="font:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#c9cbc6;text-underline-offset:0.18em;color:#141414;white-space:nowrap">Re-centre</button>
+              </div>
+            </div>
+          </sc-if>
+        </div></details>
+
+        <details open="{{ true }}" style="border-bottom:1px solid #d5d7d2"><summary style="list-style:none;cursor:pointer;padding:16px 24px;display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:600;user-select:none" style-hover="background:#e4e5e2"><span style="font-size:11px;letter-spacing:0.14em;color:#5c5f5a;font-weight:400">03</span>Enamel colour<span style="font-weight:400;color:#5c5f5a;font-size:12px">the recessed field</span><span data-chev="" style="margin-left:auto;width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg);align-self:center"></span></summary><div style="padding:2px 24px 22px;display:grid;gap:14px">
+          <button type="button" onClick="{{ f.onPickEnamel }}" aria-haspopup="dialog" aria-label="Choose enamel filament" style="font:inherit;color:#141414;background:#fff;border:1px solid #c9cbc6;padding:8px 10px;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;cursor:pointer;width:100%" style-hover="border-color:#141414">
+            <span style="width:28px;height:28px;background:{{ f.enamel.hex }};border:1px solid rgba(0,0,0,0.18)"></span>
+            <span style="display:grid;line-height:1.25;min-width:0"><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.enamel.color }}</span><span style="color:#5c5f5a;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.enamel.sub }}</span></span>
+            <span style="font-size:12px;color:#5c5f5a;display:flex;align-items:center;gap:8px">Change<span style="width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg)"></span></span>
+          </button>
+          <label style="display:flex;gap:10px;align-items:center;color:#5c5f5a"><input type="color" value="{{ f.enamelHex }}" onChange="{{ f.onEnamelHex }}" style="width:28px;height:24px;padding:0;border:1px solid #c9cbc6;background:#fff;cursor:pointer"><span>Or a custom colour · {{ f.enamelHexUpper }}</span></label>
+          <button type="button" onClick="{{ f.onCopyOther }}" style="font:inherit;justify-self:start;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#c9cbc6;text-underline-offset:0.18em;color:#141414">{{ f.copyLabel }}</button>
+        </div></details>
+      </sc-if>
+
+      <sc-if value="{{ isCoin }}" hint-placeholder-val="{{ false }}">
+        
+        <details open="{{ true }}" style="border-bottom:1px solid #d5d7d2"><summary style="list-style:none;cursor:pointer;padding:16px 24px;display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:600;user-select:none" style-hover="background:#e4e5e2"><span style="font-size:11px;letter-spacing:0.14em;color:#5c5f5a;font-weight:400">01</span>Size<span data-chev="" style="margin-left:auto;width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg);align-self:center"></span></summary><div style="padding:2px 24px 22px;display:grid;gap:12px">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="color:#5c5f5a;margin-right:6px">Common sizes</span>
+            <sc-for list="{{ diamChips }}" as="d" hint-placeholder-count="3">
+              <button type="button" onClick="{{ d.onClick }}" style="font:inherit;background:{{ d.bg }};color:{{ d.fg }};border:1px solid #c9cbc6;padding:4px 10px;cursor:pointer;white-space:nowrap">{{ d.label }}</button>
+            </sc-for>
+          </div>
+          <sc-for list="{{ sizeCtrls }}" as="c" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:76px minmax(0,1fr) 76px;gap:12px;align-items:center">
+              <span style="color:#5c5f5a">{{ c.label }}</span>
+              <input type="range" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" onChange="{{ c.onRange }}" aria-label="{{ c.label }}" style="width:100%;accent-color:#141414;margin:0">
+              <label style="display:flex;align-items:baseline;gap:4px;border-bottom:1px solid #c9cbc6;padding:3px 0"><input type="number" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" onChange="{{ c.onNum }}" onBlur="{{ c.onBlur }}" aria-label="{{ c.label }}" style="width:100%;min-width:0;border:0;background:transparent;font:inherit;color:#141414;text-align:right;padding:0;outline:none"><span style="color:#5c5f5a;font-size:12px;min-width:18px">{{ c.unit }}</span></label>
+            </div>
+          </sc-for>
+          <span style="color:#5c5f5a;font-size:12px">Thickness is the body; relief is how far letters and emblem stand out on each face.</span>
+        </div></details>
+
+        <details open="{{ true }}" style="border-bottom:1px solid #d5d7d2"><summary style="list-style:none;cursor:pointer;padding:16px 24px;display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:600;user-select:none" style-hover="background:#e4e5e2"><span style="font-size:11px;letter-spacing:0.14em;color:#5c5f5a;font-weight:400">02</span>Edge<span data-chev="" style="margin-left:auto;width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg);align-self:center"></span></summary><div style="padding:2px 24px 22px;display:grid;gap:12px">
+          <div role="radiogroup" aria-label="Edge" style="display:grid;grid-template-columns:1fr 1fr;border:1px solid #c9cbc6;background:#fff">
+            <sc-for list="{{ edgeOpts }}" as="o" hint-placeholder-count="2">
+              <button type="button" role="radio" aria-checked="{{ o.selected }}" onClick="{{ o.onClick }}" style="font:inherit;background:{{ o.bg }};color:{{ o.fg }};border:0;border-left:1px solid {{ o.divider }};padding:9px 8px;cursor:pointer;display:grid;gap:1px">
+                <span style="font-weight:600">{{ o.label }}</span><span style="font-size:11px;opacity:0.75">{{ o.sub }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <sc-for list="{{ teethCtrls }}" as="c" hint-placeholder-count="1">
+            <div style="display:grid;grid-template-columns:76px minmax(0,1fr) 76px;gap:12px;align-items:center;opacity:{{ c.op }}">
+              <span style="color:#5c5f5a">{{ c.label }}</span>
+              <input type="range" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" disabled="{{ c.disabled }}" onChange="{{ c.onRange }}" aria-label="{{ c.label }}" style="width:100%;accent-color:#141414;margin:0">
+              <label style="display:flex;align-items:baseline;gap:4px;border-bottom:1px solid #c9cbc6;padding:3px 0"><input type="number" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.value }}" disabled="{{ c.disabled }}" onChange="{{ c.onNum }}" onBlur="{{ c.onBlur }}" aria-label="{{ c.label }}" style="width:100%;min-width:0;border:0;background:transparent;font:inherit;color:#141414;text-align:right;padding:0;outline:none"><span style="color:#5c5f5a;font-size:12px;min-width:18px">{{ c.unit }}</span></label>
+            </div>
+          </sc-for>
+        </div></details>
+
+        <details open="{{ true }}" style="border-bottom:1px solid #d5d7d2"><summary style="list-style:none;cursor:pointer;padding:16px 24px;display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:600;user-select:none" style-hover="background:#e4e5e2"><span style="font-size:11px;letter-spacing:0.14em;color:#5c5f5a;font-weight:400">03</span>Metal colour<span style="font-weight:400;color:#5c5f5a;font-size:12px">rim, letters and emblem</span><span data-chev="" style="margin-left:auto;width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg);align-self:center"></span></summary><div style="padding:2px 24px 22px;display:grid;gap:12px">
+          <button type="button" onClick="{{ onPickRelief }}" aria-haspopup="dialog" aria-label="Choose metal filament" style="font:inherit;color:#141414;background:#fff;border:1px solid #c9cbc6;padding:8px 10px;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;cursor:pointer;width:100%" style-hover="border-color:#141414">
+            <span style="width:28px;height:28px;background:{{ relief.hex }};border:1px solid rgba(0,0,0,0.18)"></span>
+            <span style="display:grid;line-height:1.25;min-width:0"><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ relief.color }}</span><span style="color:#5c5f5a;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ relief.sub }}</span></span>
+            <span style="font-size:12px;color:#5c5f5a;display:flex;align-items:center;gap:8px">Change<span style="width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg)"></span></span>
+          </button>
+          <label style="display:flex;gap:10px;align-items:center;color:#5c5f5a"><input type="color" value="{{ reliefHex }}" onChange="{{ onReliefHex }}" style="width:28px;height:24px;padding:0;border:1px solid #c9cbc6;background:#fff;cursor:pointer"><span>Or a custom colour · {{ reliefHexUpper }}</span></label>
+          <span style="color:#5c5f5a;font-size:12px;text-wrap:pretty">Colours are colorimeter readings of printed samples from filamentcolors.xyz, not vendor charts.</span>
+        </div></details>
+
+        <details open="{{ true }}" style="border-bottom:1px solid #d5d7d2"><summary style="list-style:none;cursor:pointer;padding:16px 24px;display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:600;user-select:none" style-hover="background:#e4e5e2"><span style="font-size:11px;letter-spacing:0.14em;color:#5c5f5a;font-weight:400">04</span>Lettering<span data-chev="" style="margin-left:auto;width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg);align-self:center"></span></summary><div style="padding:2px 24px 22px;display:grid;gap:12px">
+          <label style="display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;align-items:center"><span style="color:#5c5f5a">Font</span>
+            <select value="{{ fontValue }}" onChange="{{ onFont }}" style="font:inherit;color:#141414;background:#fff;border:1px solid #c9cbc6;padding:7px 8px;width:100%;cursor:pointer">
+              <sc-for list="{{ fontOpts }}" as="o" hint-placeholder-count="2"><option value="{{ o.value }}">{{ o.label }}</option></sc-for>
+            </select>
+          </label>
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline">
+            <span style="color:#5c5f5a;font-size:12px">One font for the whole coin. TTF, OTF or WOFF, up to 2 MB.</span>
+            <button type="button" onClick="{{ onFontUploadClick }}" style="font:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#c9cbc6;text-underline-offset:0.18em;color:#141414;white-space:nowrap">Upload a font</button>
+          </div>
+        </div></details>
+
+        <details open="{{ true }}" style="border-bottom:1px solid #d5d7d2"><summary style="list-style:none;cursor:pointer;padding:16px 24px;display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:600;user-select:none" style-hover="background:#e4e5e2"><span style="font-size:11px;letter-spacing:0.14em;color:#5c5f5a;font-weight:400">05</span>Printer<span data-chev="" style="margin-left:auto;width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg);align-self:center"></span></summary><div style="padding:2px 24px 22px;display:grid;gap:12px">
+          <div style="display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;align-items:center"><span style="color:#5c5f5a">Nozzle</span>
+            <div role="radiogroup" aria-label="Nozzle" style="display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #c9cbc6;background:#fff">
+              <sc-for list="{{ nozzleOpts }}" as="o" hint-placeholder-count="3">
+                <button type="button" role="radio" aria-checked="{{ o.selected }}" onClick="{{ o.onClick }}" style="font:inherit;background:{{ o.bg }};color:{{ o.fg }};border:0;border-left:1px solid {{ o.divider }};padding:6px;cursor:pointer">{{ o.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <span style="color:#5c5f5a;font-size:12px">Used only for the condition checks. Not sure? Leave it at 0.4 mm.</span>
+        </div></details>
+
+        <details style="border-bottom:1px solid #d5d7d2">
+          <summary style="list-style:none;cursor:pointer;padding:16px 24px;display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:600;user-select:none" style-hover="background:#e4e5e2"><span style="font-size:11px;letter-spacing:0.14em;color:#5c5f5a;font-weight:400">06</span>Advanced<span style="font-weight:400;color:#5c5f5a;font-size:12px">ring and text radii</span><span data-chev="" style="margin-left:auto;width:6px;height:6px;border-right:1px solid #141414;border-bottom:1px solid #141414;transform:rotate(-45deg);align-self:center"></span></summary>
+          <div style="display:grid;gap:12px;padding:2px 24px 22px">
+            <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" checked="{{ dividerOn }}" onChange="{{ onDivider }}" style="accent-color:#141414;margin:0"><span>Inner divider ring</span></label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 14px">
+              <sc-for list="{{ advCtrls }}" as="a" hint-placeholder-count="6">
+                <label style="display:grid;gap:4px"><span style="color:#5c5f5a;font-size:12px">{{ a.label }}</span><input type="number" step="{{ a.step }}" value="{{ a.value }}" onChange="{{ a.onNum }}" style="font:inherit;width:100%;border:0;border-bottom:1px solid #c9cbc6;background:transparent;padding:4px 0;color:#141414;outline:none" style-focus="border-bottom-color:#141414"></label>
+              </sc-for>
+            </div>
+            <span style="color:#5c5f5a;font-size:12px;text-wrap:pretty">Design units: 320 across the coin. The tuned values come from printed coins; change them when you know why.</span>
+          </div>
+        </details>
+      </sc-if>
+    </aside>
+
+    <section aria-label="Preview" style="min-width:0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:14px;padding:16px 24px 24px">
+      <div role="tablist" aria-label="View" style="justify-self:center;display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));border:1px solid #c9cbc6;background:#fff">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+          <button type="button" role="tab" aria-selected="{{ t.active }}" onClick="{{ t.onClick }}" style="font:inherit;background:{{ t.bg }};color:{{ t.fg }};border:0;border-left:1px solid {{ t.divider }};padding:8px 18px;cursor:pointer;display:grid;text-align:center;white-space:nowrap">
+            <span style="font-weight:600">{{ t.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="background:#fff;border:1px solid #c9cbc6;position:relative;min-height:0;display:grid;place-items:center;overflow:hidden;padding-bottom:28px">
+        <div ref="{{ frontRef }}" onPointerDown="{{ pv.downFront }}" onPointerMove="{{ pv.moveFront }}" onPointerUp="{{ pv.up }}" onPointerCancel="{{ pv.up }}" role="img" aria-label="Front preview" style="display:{{ pv.frontDisplay }};grid-area:1/1;width:min(600px, 86%, calc(100vh - 250px));aspect-ratio:1;touch-action:none;user-select:none"></div>
+        <div ref="{{ backRef }}" onPointerDown="{{ pv.downBack }}" onPointerMove="{{ pv.moveBack }}" onPointerUp="{{ pv.up }}" onPointerCancel="{{ pv.up }}" role="img" aria-label="Back preview" style="display:{{ pv.backDisplay }};grid-area:1/1;width:min(600px, 86%, calc(100vh - 250px));aspect-ratio:1;touch-action:none;user-select:none"></div>
+        <div style="display:{{ pv.coinDisplay }};position:absolute;inset:0;background:#f6f6f4">
+          <div ref="{{ threeRef }}" style="position:absolute;inset:0;cursor:grab;touch-action:none"></div>
+          <div style="position:absolute;top:12px;right:12px;display:flex;border:1px solid #c9cbc6;background:#fff">
+            <sc-for list="{{ viewBtns }}" as="v" hint-placeholder-count="3">
+              <button type="button" onClick="{{ v.onClick }}" style="font:inherit;font-size:12px;background:#fff;color:#141414;border:0;border-left:1px solid {{ v.divider }};padding:5px 11px;cursor:pointer" style-hover="background:#ecedeb">{{ v.label }}</button>
+            </sc-for>
+          </div>
+          <span style="position:absolute;left:14px;top:14px;color:#5c5f5a;font-size:12px;pointer-events:none">{{ status3d }}</span>
+        </div>
+        <span style="position:absolute;left:0;right:0;bottom:12px;text-align:center;color:#5c5f5a;font-size:12px;pointer-events:none">{{ pv.hint }}</span>
+      </div>
+    </section>
+  </main>
+
+  <input type="file" ref="{{ logoInput }}" accept="image/png,image/jpeg,image/svg+xml" onChange="{{ onLogoFile }}" style="display:none">
+  <input type="file" ref="{{ jsonInput }}" accept=".json,application/json" onChange="{{ onJsonFile }}" style="display:none">
+  <input type="file" ref="{{ fontInput }}" accept=".ttf,.otf,.woff,.woff2" onChange="{{ onFontFile }}" style="display:none">
+
+  <sc-if value="{{ tplOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onCloseTpl }}" style="position:fixed;inset:0;background:rgba(20,20,20,0.45);display:grid;place-items:center;padding:24px;z-index:50">
+      <div onClick="{{ stop }}" role="dialog" aria-label="Templates" style="background:#ecedeb;border:1px solid #141414;width:min(920px,100%);max-height:calc(100vh - 48px);overflow:auto;padding:26px 28px;display:grid;gap:20px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px">
+          <div style="display:grid;gap:4px"><h2 style="margin:0;font-size:20px;font-weight:600">Start from a lot</h2><span style="color:#5c5f5a;max-width:58ch;text-wrap:pretty">Pick a template, then change the texts and colours. Everything stays editable.</span></div>
+          <button type="button" onClick="{{ onCloseTpl }}" style="font:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#c9cbc6;text-underline-offset:0.18em;color:#141414">Close</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px">
+          <sc-for list="{{ templates }}" as="t" hint-placeholder-count="3">
+            <button type="button" onClick="{{ t.onPick }}" style="font:inherit;color:#141414;background:#fff;border:1px solid #c9cbc6;padding:22px 20px 18px;display:grid;gap:14px;text-align:left;cursor:pointer" style-hover="border-color:#141414">
+              <img src="{{ t.thumb }}" alt="" style="width:100%;max-width:190px;aspect-ratio:1;justify-self:center;display:block">
+              <span style="display:grid;gap:3px">
+                <span style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5c5f5a;font-variation-settings:'wdth' 112">Lot {{ t.lot }}</span>
+                <span style="font-weight:600;font-size:16px">{{ t.name }}</span>
+                <span style="color:#5c5f5a">{{ t.desc }}</span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+        <span style="color:#5c5f5a;font-size:12px">Have a .coin.json from earlier? <button type="button" onClick="{{ onOpen }}" style="font:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#c9cbc6;text-underline-offset:0.18em;color:#141414">Open it</button>. Templates are anonymised examples.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ reqOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onCloseReq }}" style="position:fixed;inset:0;background:rgba(20,20,20,0.45);display:grid;place-items:center;padding:24px;z-index:50">
+      <div onClick="{{ stop }}" role="dialog" aria-label="Request a print" style="background:#fff;border:1px solid #141414;width:min(480px,100%);padding:24px 26px;display:grid;gap:16px">
+        <div style="display:grid;gap:4px"><h2 style="margin:0;font-size:20px;font-weight:600">Request a print</h2><span style="color:#5c5f5a;text-wrap:pretty">Daniel prints the coin for you and gets back to you by email about colours, quantity and price.</span></div>
+        <sc-if value="{{ reqForm }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;gap:12px">
+            <label style="display:grid;gap:5px"><span style="color:#5c5f5a">Your name</span><input type="text" value="{{ req.name }}" onChange="{{ req.onName }}" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid #c9cbc6;outline:none;color:#141414" style-focus="border-color:#141414"></label>
+            <label style="display:grid;gap:5px"><span style="color:#5c5f5a">Email</span><input type="email" value="{{ req.email }}" onChange="{{ req.onEmail }}" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid #c9cbc6;outline:none;color:#141414" style-focus="border-color:#141414"></label>
+            <label style="display:grid;gap:5px"><span style="color:#5c5f5a">Message · optional</span><textarea rows="3" value="{{ req.message }}" onChange="{{ req.onMessage }}" placeholder="How many coins, and by when?" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid #c9cbc6;outline:none;resize:vertical;color:#141414" style-focus="border-color:#141414"></textarea></label>
+            <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" checked="{{ req.attach }}" onChange="{{ req.onAttach }}" style="accent-color:#141414;margin:0"><span>Attach this design ({{ fileName }})</span></label>
+            <sc-if value="{{ req.hasError }}" hint-placeholder-val="{{ false }}"><span>⚑ {{ req.error }}</span></sc-if>
+            <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;padding-top:4px">
+              <button type="button" onClick="{{ req.onSend }}" style="font:inherit;color:#fff;background:#141414;border:1px solid #141414;padding:9px 16px;cursor:pointer">{{ req.sendLabel }}</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ reqSent }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;gap:12px">
+            <span style="text-wrap:pretty">✓ Sent to Daniel{{ req.sentWhat }}. He will reply to {{ req.email }}.</span>
+            <button type="button" onClick="{{ onCloseReq }}" style="font:inherit;justify-self:end;color:#141414;background:#fff;border:1px solid #141414;padding:8px 14px;cursor:pointer">Done</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pkOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ pk.onClose }}" style="position:fixed;inset:0;z-index:40"></div>
+    <div role="dialog" aria-label="{{ pk.title }}" style="position:fixed;left:{{ pk.left }}px;top:{{ pk.top }}px;width:min(700px, calc(100vw - 24px));box-shadow:0 12px 32px -12px rgba(20,20,20,0.35);background:#fff;border:1px solid #141414;z-index:41;display:grid;font-size:13px">
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 12px;border-bottom:1px solid #d5d7d2">
+        <strong style="font-weight:600;white-space:nowrap">{{ pk.title }}</strong>
+        <input type="text" value="{{ pk.q }}" onChange="{{ pk.onQ }}" placeholder="Search brand, type or colour…" autofocus="" style="font:inherit;flex:1;min-width:0;border:0;border-bottom:1px solid #c9cbc6;padding:6px 0;outline:none;background:transparent;color:#141414" style-focus="border-bottom-color:#141414">
+        <button type="button" onClick="{{ pk.onClose }}" style="font:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#c9cbc6;text-underline-offset:0.18em;color:#141414">Close</button>
+      </div>
+      <div style="display:grid;grid-template-columns:150px 180px minmax(0,1fr);height:320px">
+        <div style="border-right:1px solid #d5d7d2;overflow:auto;padding:6px 0;scrollbar-width:thin">
+          <span style="display:block;padding:4px 12px 6px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5c5f5a">Brand</span>
+          <sc-for list="{{ pk.brands }}" as="b" hint-placeholder-count="5">
+            <button type="button" onClick="{{ b.onClick }}" style="font:inherit;width:100%;display:flex;justify-content:space-between;gap:8px;padding:7px 12px;border:0;background:{{ b.bg }};color:{{ b.fg }};cursor:pointer;text-align:left"><span>{{ b.name }}</span><span style="opacity:0.6">{{ b.count }}</span></button>
+          </sc-for>
+        </div>
+        <div style="border-right:1px solid #d5d7d2;overflow:auto;padding:6px 0;scrollbar-width:thin">
+          <span style="display:block;padding:4px 12px 6px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5c5f5a">Type</span>
+          <sc-for list="{{ pk.types }}" as="t" hint-placeholder-count="4">
+            <button type="button" onClick="{{ t.onClick }}" style="font:inherit;width:100%;display:grid;gap:4px;padding:7px 12px;border:0;background:{{ t.bg }};color:#141414;cursor:pointer;text-align:left">
+              <span style="display:flex;justify-content:space-between;gap:8px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span><span style="opacity:0.6">{{ t.count }}</span></span>
+              <span style="display:flex;gap:2px"><sc-for list="{{ t.strip }}" as="s" hint-placeholder-count="6"><span style="width:12px;height:6px;background:{{ s }}"></span></sc-for></span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="overflow:auto;padding:6px 12px 12px;scrollbar-width:thin">
+          <span style="display:block;padding:4px 0 8px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5c5f5a">{{ pk.colorTitle }}</span>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:12px 8px">
+            <sc-for list="{{ pk.colors }}" as="c" hint-placeholder-count="8">
+              <button type="button" onClick="{{ c.onClick }}" title="{{ c.full }}" style="font:inherit;font-size:11px;border:0;background:none;padding:0;cursor:pointer;display:grid;gap:5px;justify-items:center;text-align:center;color:#141414">
+                <span style="width:44px;height:44px;background:{{ c.hex }};border:1px solid rgba(0,0,0,.18);outline:2px solid {{ c.ring }};outline-offset:2px"></span>
+                <span style="line-height:1.2">{{ c.name }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ pk.empty }}" hint-placeholder-val="{{ false }}"><span style="color:#5c5f5a">No filament matches. Try fewer words.</span></sc-if>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 12px;border-top:1px solid #d5d7d2;background:#ecedeb;font-size:12px;color:#5c5f5a">
+        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span style="width:14px;height:14px;background:{{ pk.cur.hex }};border:1px solid rgba(0,0,0,.18);flex:none"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ pk.cur.full }} · {{ pk.cur.hexU }}</span></span>
+        <span style="white-space:nowrap">Colour data: <a href="https://filamentcolors.xyz/" target="_blank" rel="noopener">filamentcolors.xyz</a> (sample)</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#141414;color:#fff;padding:10px 16px;max-width:min(560px,calc(100vw - 32px));z-index:60;text-wrap:pretty">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;autoRotate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;3D preview&quot;}}">
+const HAIR='#c9cbc6', RULE='#d5d7d2', INK='#141414';
+const LS_KEY='coin-designer:autosave:v1';
+const FIL={
+  relief:[
+    {id:'silk-gold',name:'PLA Silk+ Gold',hex:'#DCA256',measured:true},
+    {id:'silk-silver',name:'PLA Silk+ Silver',hex:'#B9C0C4',measured:true},
+    {id:'matte-bronze',name:'PLA Matte Bronze',hex:'#8E6C3A'},
+    {id:'silk-copper',name:'PLA Silk Copper',hex:'#B5714A'}],
+  enamel:[
+    {id:'matte-dark-blue',name:'PLA Matte Dark Blue',hex:'#395064',measured:true},
+    {id:'basic-blue',name:'PLA Basic Blue',hex:'#0A2989',measured:true},
+    {id:'basic-black',name:'PLA Basic Black',hex:'#141414'},
+    {id:'matte-dark-red',name:'PLA Matte Dark Red',hex:'#7B2D2B'},
+    {id:'matte-dark-green',name:'PLA Matte Dark Green',hex:'#2F4B3B'},
+    {id:'basic-white',name:'PLA Basic White',hex:'#F2F1EC'}]
+};
+const RAW_CAT={
+ 'Bambu Lab':{'PLA Basic':['PLA',[['Black','#141414'],['Jade White','#E8E6DA'],['Blue','#0A2989'],['Red','#C12E1F'],['Gold','#E4BD68'],['Silver','#A6A9AA'],['Bambu Green','#00AE42'],['Orange','#F0781E']]],
+  'PLA Matte':['PLA',[['Dark Blue','#395064'],['Charcoal','#333333'],['Ivory White','#F0EDE4'],['Dark Red','#7B2D2B'],['Dark Green','#2F4B3B'],['Desert Tan','#C8B18B'],['Marine Blue','#1E5F8C']]],
+  'PLA Silk+':['PLA',[['Gold','#DCA256'],['Silver','#B9C0C4'],['Copper','#B5714A'],['Titan Gray','#5E6468'],['Candy Red','#B3262E']]],
+  'PETG HF':['PETG',[['Black','#1A1A1A'],['White','#EFEFEA'],['Blue','#1F4E9A'],['Green','#2E7D4F']]]},
+ 'COEX':{'PLA':['PLA',[['Pumpkin Orange','#E87336'],['Aqua Blue','#3CB4AE'],['Green Bay Green','#386747'],['Maroon Red','#71434E'],['Ocean Blue','#008FBC'],['Scarlet Red','#B63341'],['Taxicab Yellow','#FFC539'],['Cobalt Blue','#264E8B'],['Plum Purple','#4B3851']]]},
+ 'Prusament':{'PLA':['PLA',[['Galaxy Black','#222326'],['Jet Black','#161616'],['Azure Blue','#2D6DB5'],['Lipstick Red','#B11F2C'],['Pristine White','#EFEFEA'],["Gentleman's Grey",'#56595C']]],
+  'PETG':['PETG',[['Jet Black','#171717'],['Urban Grey','#7D8084'],['Ultramarine Blue','#2742A8'],['Signal White','#F1F0EA']]]},
+ 'Polymaker':{'PolyTerra PLA':['PLA',[['Charcoal Black','#2B2B2B'],['Cotton White','#EDEBE3'],['Army Blue','#3A4F63'],['Forest Green','#3C5A40'],['Muted Red','#8E3B36'],['Sand','#C9B79A']]],
+  'PolyLite Silk PLA':['PLA',[['Gold','#D4A04C'],['Silver','#B8BDC0'],['Bronze','#9A6B3D'],['Copper','#B0683E']]]},
+ 'eSun':{'PLA+':['PLA',[['Black','#1C1C1C'],['White','#F0EFEA'],['Blue','#1D4A9A'],['Fire Engine Red','#C2272D'],['Grey','#8A8D8F']]],
+  'Silk PLA':['PLA',[['Gold','#D6A24D'],['Copper','#B06B45'],['Silver','#BFC3C6']]]},
+ 'Elegoo':{'PLA':['PLA',[['Black','#1B1B1B'],['White','#F1F0EB'],['Blue','#1F58A8'],['Red','#C23030']]],
+  'PLA Matte':['PLA',[['Black','#2A2A2A'],['Ruby Red','#7C2A30'],['Dark Blue','#33475C']]]}
+};
+const CAT=[]; const CAT_TYPES=[];
+for(const brand of Object.keys(RAW_CAT)) for(const type of Object.keys(RAW_CAT[brand])){ const [parent,cols]=RAW_CAT[brand][type]; CAT_TYPES.push({brand,type,parent}); for(const [color,hex] of cols) CAT.push({id:brand+'|'+type+'|'+color,brand,type,parent,color,hex}); }
+const CAT_BRANDS=Object.keys(RAW_CAT);
+const LEGACY={'silk-gold':'Bambu Lab|PLA Silk+|Gold','silk-silver':'Bambu Lab|PLA Silk+|Silver','matte-bronze':'Polymaker|PolyLite Silk PLA|Bronze','silk-copper':'Bambu Lab|PLA Silk+|Copper','matte-dark-blue':'Bambu Lab|PLA Matte|Dark Blue','basic-blue':'Bambu Lab|PLA Basic|Blue','basic-black':'Bambu Lab|PLA Basic|Black','matte-dark-red':'Bambu Lab|PLA Matte|Dark Red','matte-dark-green':'Bambu Lab|PLA Matte|Dark Green','basic-white':'Bambu Lab|PLA Basic|Jade White'};
+const catById=id=>CAT.find(f=>f.id===(LEGACY[id]||id));
+const catMatch=(f,q)=>q.toLowerCase().split(/\s+/).filter(Boolean).every(t=>(f.brand+' '+f.type+' '+f.color).toLowerCase().includes(t));
+const COMPASS="M0,-82.8 L13.3,-32.1 L42.2,-42.2 L32.1,-13.3 L82.8,0 L32.1,13.3 L42.2,42.2 L13.3,32.1 L0,82.8 L-13.3,32.1 L-42.2,42.2 L-32.1,13.3 L-82.8,0 L-32.1,-13.3 L-42.2,-42.2 L-13.3,-32.1 Z";
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const isObj=o=>o&&typeof o==='object'&&!Array.isArray(o);
+function merge(b,o){ if(!isObj(o)) return b; for(const k of Object.keys(o)){ if(isObj(b[k])&&isObj(o[k])) merge(b[k],o[k]); else b[k]=o[k]; } return b; }
+function mkFace(top,bottom,enamel,icon){ return {inlay:{filament:enamel},top_text:{text:top,size:26,letter_spacing:1.2,radius:118.5},bottom_text:{text:bottom,size:26,letter_spacing:1.2,radius:134.2},dots:{enabled:true,radius:5},icon:icon?{kind:'builtin',name:'Placeholder mark',fit:0.82,dx:0,dy:0,rot:0}:null}; }
+function baseCfg(name){ return {schema_version:1,meta:{name:name||'Untitled coin',preset:'fancy'},size:{diameter_mm:50,body_mm:2.5,relief_mm:0.7},edge:{style:'reeded',teeth:120,depth:2},rings:{r_edge:160,r_rim:151,r_inlay:143,divider:true,r_div_out:113,r_div_in:101},font:{key:'poppins-semibold'},colors:{relief:{filament:'silk-gold'}},faces:{front:mkFace('','','matte-dark-blue',false),back:mkFace('','','matte-dark-blue',false)},print:{nozzle_mm:0.4,enamel_depth_mm:0.4}}; }
+const PRESETS={
+  fancy:{name:'Fancy',desc:'Reeded edge, inner ring and separator dots. The classic challenge coin.',apply:c=>{c.edge.style='reeded';c.rings.divider=true;for(const k of ['front','back']){const f=c.faces[k];f.dots.enabled=true;f.top_text.radius=118.5;f.bottom_text.radius=134.2;}c.meta.preset='fancy';}},
+  simple:{name:'Simple',desc:'Plain edge, no ring or dots, slightly larger lettering.',apply:c=>{c.edge.style='plain';c.rings.divider=false;for(const k of ['front','back']){const f=c.faces[k];f.dots.enabled=false;f.top_text.radius=121;f.bottom_text.radius=136;f.top_text.size=Math.max(f.top_text.size,28);f.bottom_text.size=Math.max(f.bottom_text.size,28);}c.meta.preset='simple';}}
+};
+const TEMPLATES=[
+  {lot:1,name:'Northern Analysis Unit',desc:'Fancy · gold on dark blue',make:()=>{const c=baseCfg('Northern Analysis Unit');c.faces.front=mkFace('NORTHERN ANALYSIS UNIT','Est. 2021','matte-dark-blue',true);c.faces.back=mkFace('STRENGTH IN DATA','Presented for service','matte-dark-blue',true);return c;}},
+  {lot:2,name:'Harbour Rowing Club',desc:'Simple · silver on black',make:()=>{const c=baseCfg('Harbour Rowing Club');c.colors.relief={filament:'silk-silver'};c.faces.front=mkFace('HARBOUR ROWING CLUB','Since 1994','basic-black',true);c.faces.back=mkFace('SPRING REGATTA','Crew of the year','basic-black',true);PRESETS.simple.apply(c);return c;}},
+  {lot:3,name:'Blank coin',desc:'Empty faces · fancy layout',make:()=>baseCfg('Untitled coin')}
+];
+function colorOf(ref,fallback){ if(ref&&ref.hex) return {hex:ref.hex,name:'Custom colour',color:'Custom colour',sub:'Your own hex value',full:'Custom '+ref.hex.toUpperCase(),custom:true}; const f=catById(ref&&ref.filament)||catById(fallback==='relief'?'silk-gold':'matte-dark-blue'); return {hex:f.hex,name:f.brand+' '+f.type+' '+f.color,color:f.color,sub:f.brand+' · '+f.type,full:f.brand+' '+f.type+' '+f.color,id:f.id,brand:f.brand,type:f.type}; }
+function darken(hex,k){ const n=parseInt(hex.slice(1),16); const r=Math.round(((n>>16)&255)*k),g=Math.round(((n>>8)&255)*k),b=Math.round((n&255)*k); return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''); }
+function edgeR(c,t){ const d=c.edge.style==='reeded'?c.edge.depth:0; return 160-d*(0.5-0.5*Math.cos(c.edge.teeth*t)); }
+let _mctx=null;
+function textWidth(T,c){
+  try{ _mctx=_mctx||document.createElement('canvas').getContext('2d'); _mctx.font=`${fontW(c)} ${T.size}px ${fontFam(c)==='Poppins'?"'Poppins'":"'CoinCustom'"}, sans-serif`; return _mctx.measureText(T.text).width+T.letter_spacing*T.text.length; }catch(e){}
+  let w=0; for(const ch of T.text){ w+= ch===' '?0.28:(/[A-Z0-9MW]/.test(ch)?0.68:0.55); } return w*T.size+T.letter_spacing*Math.max(0,T.text.length-1); }
+function fontFam(c){ return c.font.custom?"CoinCustom":"Poppins"; }
+function fontW(c){ return c.font.custom?'normal':(c.font.key==='poppins-medium'?500:600); }
+
+function buildSVG(c,fk,mode,o){
+  o=o||{}; const F=c.faces[fk], R=c.rings, p=o.idp||fk;
+  const H=mode==='height';
+  const rel=H?'#ffffff':colorOf(c.colors.relief,'relief').hex;
+  const en=H?'#000000':colorOf(F.inlay,'enamel').hex;
+  const px=o.px?`width="${o.px}" height="${o.px}"`:'width="100%" height="100%"';
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-160 -160 320 320" ${px} style="display:block">`;
+  const tr=F.top_text.radius, br=F.bottom_text.radius;
+  s+=`<defs>${o.fontCss?`<style>${o.fontCss}</style>`:''}<path id="${p}-at" d="M${-tr},0 A${tr},${tr} 0 0 1 ${tr},0"/><path id="${p}-ab" d="M${-br},0 A${br},${br} 0 0 0 ${br},0"/>`;
+  if(mode==='preview') s+=`<filter id="${p}-sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0.8" stdDeviation="0.6" flood-color="#000" flood-opacity="0.35"/></filter>`;
+  s+=`</defs>`;
+  if(c.edge.style==='reeded'){ const N=Math.min(c.edge.teeth*8,2400); let d=''; for(let i=0;i<N;i++){const t=i/N*Math.PI*2, r=edgeR(c,t); d+=(i?'L':'M')+(r*Math.cos(t)).toFixed(2)+','+(r*Math.sin(t)).toFixed(2);} s+=`<path d="${d}Z" fill="${rel}"/>`; }
+  else s+=`<circle r="160" fill="${rel}"/>`;
+  if(mode==='preview') s+=`<circle r="${R.r_inlay+2}" fill="${darken(en,0.72)}"/>`;
+  s+=`<circle r="${R.r_inlay}" fill="${en}"/>`;
+  s+=`<g ${mode==='preview'?`filter="url(#${p}-sh)"`:''} fill="${rel}">`;
+  if(R.divider) s+=`<circle r="${(R.r_div_out+R.r_div_in)/2}" fill="none" stroke="${rel}" stroke-width="${R.r_div_out-R.r_div_in}"/>`;
+  if(F.dots.enabled){ const dr=(R.r_div_out+R.r_inlay)/2; s+=`<circle cx="${-dr}" r="${F.dots.radius}"/><circle cx="${dr}" r="${F.dots.radius}"/>`; }
+  const I=F.icon;
+  if(I){ const Rr=I.fit*R.r_div_in;
+    if(I.kind==='upload'&&I.processed){ const k=Rr/100; s+=`<g transform="translate(${I.dx},${-I.dy}) rotate(${-I.rot}) scale(${k})"><mask id="${p}-m" maskUnits="userSpaceOnUse" x="-100" y="-100" width="200" height="200"><image href="${I.processed}" xlink:href="${I.processed}" x="-100" y="-100" width="200" height="200"/></mask><rect x="-100" y="-100" width="200" height="200" fill="${rel}" mask="url(#${p}-m)"/></g>`; }
+    else if(I.kind==='builtin'){ const k=Rr/82.8; s+=`<g transform="translate(${I.dx},${-I.dy}) rotate(${-I.rot}) scale(${k})"><path d="${COMPASS}"/><circle r="18.2" fill="${en}"/><circle r="7.5"/></g>`; }
+  }
+  const txt=(T,id)=>T.text?`<text font-family="${fontFam(c)}" font-weight="${fontW(c)}" font-size="${T.size}" letter-spacing="${T.letter_spacing}"><textPath href="#${id}" xlink:href="#${id}" startOffset="50%" text-anchor="middle">${esc(T.text)}</textPath></text>`:'';
+  s+=txt(F.top_text,p+'-at')+txt(F.bottom_text,p+'-ab');
+  s+=`</g>`;
+  if(o.sel&&I){ const Rr=I.fit*R.r_div_in, hs=o.hs||3, q=hs/2, st='stroke="#141414" stroke-width="1" vector-effect="non-scaling-stroke"';
+    s+=`<g transform="translate(${I.dx},${-I.dy}) rotate(${-I.rot})"><rect x="${-Rr}" y="${-Rr}" width="${2*Rr}" height="${2*Rr}" fill="none" ${st} stroke-dasharray="4 3"/><rect x="${-Rr}" y="${-Rr}" width="${2*Rr}" height="${2*Rr}" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" stroke-dashoffset="3.5"/><line x1="0" y1="${-Rr}" x2="0" y2="${-Rr-hs*2.2}" ${st}/>`;
+    for(const [x,y] of [[-1,-1],[1,-1],[1,1],[-1,1]]) s+=`<rect x="${x*Rr-q}" y="${y*Rr-q}" width="${hs}" height="${hs}" fill="#fff" ${st}/>`;
+    s+=`<circle cy="${-Rr-hs*2.2-q}" r="${q*1.1}" fill="#fff" ${st}/></g>`; }
+  s+=`</svg>`;
+  return s;
+}
+function svgUrl(s){ return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s); }
+function loadImg(src){ return new Promise((res,rej)=>{const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src;}); }
+function readFile(file,as){ return new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; as==='buf'?r.readAsArrayBuffer(file):r.readAsDataURL(file);}); }
+function b64(buf){ const u=new Uint8Array(buf); let s=''; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); }
+async function traceImage(src,tr){
+  const img=await loadImg(src); const S=512;
+  const c=document.createElement('canvas'); c.width=c.height=S; const x=c.getContext('2d',{willReadFrequently:true});
+  const iw=img.naturalWidth||S, ih=img.naturalHeight||S, sc=Math.min(S/iw,S/ih), w=iw*sc, h=ih*sc;
+  x.drawImage(img,(S-w)/2,(S-h)/2,w,h);
+  const d=x.getImageData(0,0,S,S), p=d.data; let x0=S,y0=S,x1=-1,y1=-1;
+  for(let i=0;i<p.length;i+=4){ const l=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2]; const ink=p[i+3]>127&&(tr.invert?l>=tr.threshold:l<tr.threshold);
+    if(ink){p[i]=p[i+1]=p[i+2]=p[i+3]=255; const q=i/4, px=q%S, py=(q/S)|0; if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py;} else p[i+3]=0; }
+  if(x1<0) return null;
+  x.putImageData(d,0,0);
+  const bw=x1-x0+1, bh=y1-y0+1, k=(S/2*0.98)/(Math.hypot(bw,bh)/2);
+  const o=document.createElement('canvas'); o.width=o.height=S;
+  o.getContext('2d').drawImage(c,x0,y0,bw,bh,S/2-bw*k/2,S/2-bh*k/2,bw*k,bh*k);
+  return o.toDataURL('image/png');
+}
+function normalize(obj){ if(!isObj(obj)||(obj.schema_version||1)>1) throw new Error('bad'); const b=baseCfg(''); const faces=obj.faces; const o=Object.assign({},obj); delete o.faces; merge(b,o); if(isObj(faces)) for(const k of ['front','back']) if(isObj(faces[k])){ const icon=faces[k].icon; const fo=Object.assign({},faces[k]); delete fo.icon; merge(b.faces[k],fo); b.faces[k].icon=icon||null; } return b; }
+
+class Component extends DCLogic {
+  state = this.initState();
+  frontRef=React.createRef(); backRef=React.createRef(); threeRef=React.createRef();
+  logoInput=React.createRef(); jsonInput=React.createRef(); fontInput=React.createRef();
+  past=[]; future=[]; fontData={}; _last={}; _rot={x:-0.28,y:0.5,tx:-0.28,ty:0.5,drag:null,resume:0}; _v3=0;
+
+  initState(){
+    let cfg=null, restored=false;
+    try{ const raw=localStorage.getItem(LS_KEY); if(raw){ cfg=normalize(JSON.parse(raw)); restored=true; } }catch(e){ cfg=null; }
+    return {cfg:cfg||TEMPLATES[0].make(), tab:'front', tplOpen:!restored, restored, dlOpen:false, exporting:null, toast:null, reqOpen:false, req:{name:'',email:'',message:'',attach:true}, reqState:'form', reqError:'', acked:{}, selIcon:null, pk:null, status3d:'Loading 3D…', fontsTick:0};
+  }
+  componentDidMount(){
+    this._key=e=>this.onKey(e); window.addEventListener('keydown',this._key);
+    this._clickAway=e=>{ if(this.state.dlOpen && !e.target.closest('[data-dl]')) this.setState({dlOpen:false}); };
+    window.addEventListener('pointerdown',this._clickAway,true);
+    for(const [fk,ref] of [['front',this.frontRef],['back',this.backRef]]) if(ref.current) ref.current.addEventListener('wheel',e=>this.onWheel(fk,ref,e),{passive:false});
+    if(this.state.cfg.font.custom) this.registerFont(this.state.cfg.font.custom.data);
+    this._prevCfg=this.state.cfg; this.paintFaces(); this.loadPoppins(); this.init3D();
+    if(document.fonts) document.fonts.ready.then(()=>{ if(!this._dead) this.forceUpdate(); });
+    if(this.state.restored) this.toast('Restored your last design from this browser.');
+  }
+  componentWillUnmount(){ this._dead=true; window.removeEventListener('keydown',this._key); window.removeEventListener('pointerdown',this._clickAway,true); cancelAnimationFrame(this._raf); if(this._ro) this._ro.disconnect(); }
+  componentDidUpdate(){
+    this.paintFaces();
+    if(this._prevCfg!==this.state.cfg){ this._prevCfg=this.state.cfg; clearTimeout(this._saveT); this._saveT=setTimeout(()=>{ try{localStorage.setItem(LS_KEY,JSON.stringify(this.state.cfg));}catch(e){} },400); this.schedule3D(); }
+    { const el=this.threeRef.current; if(el&&this.three&&this.three.renderer.domElement.parentNode!==el){ el.appendChild(this.three.renderer.domElement); this.observe(el); } if(el&&!this.three&&!this._initing) this.init3D(); }
+  }
+
+  // ---------- model ----------
+  fk(){ return this.state.tab==='back'?'back':'front'; }
+  upd(fn,key){ const next=JSON.parse(JSON.stringify(this.state.cfg)); fn(next); this.commit(next,key); }
+  commit(next,key){ const now=Date.now(); if(!(key&&key===this._lk&&now-this._lt<900)){ this.past.push(this.state.cfg); if(this.past.length>100) this.past.shift(); } this._lk=key; this._lt=now; this.future=[]; this.setState({cfg:next}); }
+  uf(fn,key){ const k=this.fk(); this.upd(c=>fn(c.faces[k],c),key?key+k:null); }
+  undo(){ if(!this.past.length) return; this.future.push(this.state.cfg); const c=this.past.pop(); this._lk=null; this.setState({cfg:c}); }
+  redo(){ if(!this.future.length) return; this.past.push(this.state.cfg); const c=this.future.pop(); this._lk=null; this.setState({cfg:c}); }
+  toast(msg){ clearTimeout(this._tt); this.setState({toast:msg}); this._tt=setTimeout(()=>this.setState({toast:null}),4000); }
+  onKey(e){
+    const inField=e.target.closest&&e.target.closest('input,textarea,select,[contenteditable]');
+    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!inField){ e.preventDefault(); e.shiftKey?this.redo():this.undo(); return; }
+    if(e.key==='Escape'){ this.setState({tplOpen:false,reqOpen:false,dlOpen:false,selIcon:null,pk:null}); return; }
+    if(inField) return;
+    if(e.key==='1') this.setState({tab:'front'}); if(e.key==='2') this.setState({tab:'back'}); if(e.key==='3') this.setState({tab:'coin'});
+  }
+  slug(){ return (this.state.cfg.meta.name||'coin').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')||'coin'; }
+
+  // ---------- 2D faces ----------
+  paintFaces(){ for(const [fk,ref] of [['front',this.frontRef],['back',this.backRef]]){ if(!ref.current) continue; const w=ref.current.clientWidth||320, h=buildSVG(this.state.cfg,fk,'preview',{idp:'pv-'+fk,sel:this.state.selIcon===fk,hs:9*320/w}); if(this._last[fk]!==h||!ref.current.firstChild){ ref.current.innerHTML=h; this._last[fk]=h; } } }
+  facePt(e,ref){ const r=ref.current.getBoundingClientRect(); return {x:(e.clientX-r.left)/r.width*320-160,y:(e.clientY-r.top)/r.height*320-160,s:320/r.width}; }
+  overIcon(fk,ref,e){ const I=this.state.cfg.faces[fk].icon; if(!I) return false; const p=this.facePt(e,ref); return Math.hypot(p.x-I.dx,p.y+I.dy)<=I.fit*this.state.cfg.rings.r_div_in; }
+  handleAt(fk,ref,e){
+    if(this.state.selIcon!==fk) return null; const I=this.state.cfg.faces[fk].icon; if(!I) return null;
+    const p=this.facePt(e,ref), hs=9*p.s, Rr=I.fit*this.state.cfg.rings.r_div_in, a=-I.rot*Math.PI/180, ca=Math.cos(a), sa=Math.sin(a), cx=I.dx, cy=-I.dy;
+    const W=(lx,ly)=>({x:cx+lx*ca-ly*sa,y:cy+lx*sa+ly*ca});
+    const r=W(0,-Rr-hs*2.7); if(Math.hypot(p.x-r.x,p.y-r.y)<=hs*1.1) return {mode:'rotate'};
+    for(const [x,y] of [[-1,-1],[1,-1],[1,1],[-1,1]]){ const c=W(x*Rr,y*Rr); if(Math.hypot(p.x-c.x,p.y-c.y)<=hs*1.1) return {mode:'scale',diag:(x*y>0)!==(((I.rot%180)+180)%180>45&&((I.rot%180)+180)%180<135)}; }
+    return null;
+  }
+  onDown(fk,ref,e){
+    if(this.state.tab!==fk) this.setState({tab:fk});
+    const I=this.state.cfg.faces[fk].icon, hd=this.handleAt(fk,ref,e);
+    if(!hd&&!this.overIcon(fk,ref,e)){ if(this.state.selIcon) this.setState({selIcon:null}); return; }
+    if(this.state.selIcon!==fk) this.setState({selIcon:fk});
+    const p=this.facePt(e,ref);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    this._drag={fk,mode:hd?hd.mode:'move',sx:e.clientX,sy:e.clientY,dx:I.dx,dy:I.dy,s:p.s};
+    e.preventDefault();
+  }
+  onMove(fk,ref,e){
+    const d=this._drag;
+    if(d&&d.fk===fk){
+      if(d.mode==='move'){ const nx=d.dx+(e.clientX-d.sx)*d.s, ny=d.dy-(e.clientY-d.sy)*d.s; this.upd(c=>{c.faces[fk].icon.dx=Math.round(nx*10)/10; c.faces[fk].icon.dy=Math.round(ny*10)/10;},'drag'+fk); }
+      else { const p=this.facePt(e,ref), vx=p.x-d.dx, vy=p.y+d.dy;
+        if(d.mode==='scale'){ const fit=clamp(Math.hypot(vx,vy)/Math.SQRT2/this.state.cfg.rings.r_div_in,0.2,1); this.upd(c=>{c.faces[fk].icon.fit=Math.round(fit*100)/100;},'hscale'+fk); }
+        else { let deg=Math.atan2(vy,vx)*180/Math.PI+90; let rot=-deg; rot=((rot+180)%360+360)%360-180; const snap=Math.round(rot/15)*15; if(Math.abs(rot-snap)<3) rot=snap; this.upd(c=>{c.faces[fk].icon.rot=Math.round(rot);},'hrot'+fk); } }
+      return;
+    }
+    const hd=this.handleAt(fk,ref,e);
+    e.currentTarget.style.cursor=hd?(hd.mode==='rotate'?'crosshair':(hd.diag?'nwse-resize':'nesw-resize')):(this.overIcon(fk,ref,e)?'move':'default');
+  }
+  onWheel(fk,ref,e){ if(!this.overIcon(fk,ref,e)) return; e.preventDefault(); const I=this.state.cfg.faces[fk].icon; const v=clamp(I.fit-Math.sign(e.deltaY)*0.02,0.2,1); this.upd(c=>{c.faces[fk].icon.fit=Math.round(v*100)/100;},'wheel'+fk); }
+
+  // ---------- warnings ----------
+  warnings(){
+    const c=this.state.cfg, W=[], mmU=c.size.diameter_mm/320, noz=c.print.nozzle_mm, R=c.rings;
+    for(const fk of ['front','back']){
+      const F=c.faces[fk], where=fk==='front'?'Obverse':'Reverse';
+      for(const [slot,label] of [['top_text','Top text'],['bottom_text','Bottom text']]){
+        const T=F[slot]; if(!T.text.trim()) continue;
+        const stroke=0.15*T.size*mmU;
+        if(stroke<1.5*noz){ const need=Math.min(60,Math.ceil(1.5*noz/(0.15*mmU)*10)/10); W.push({id:fk+slot+'thin',face:fk,where,msg:`${label} strokes are about ${stroke.toFixed(2)} mm wide, too thin for a ${noz} mm nozzle to print cleanly.`,fixLabel:`Enlarge letters to ${(need*mmU).toFixed(1)} mm`,fix:x=>{x.faces[fk][slot].size=need;}}); }
+        const ang=textWidth(T,c)/T.radius, maxAng=Math.PI-(F.dots.enabled?0.1:0.04);
+        if(ang>maxAng){ W.push({id:fk+slot+'long',face:fk,where,msg:`${label} is longer than its arc${F.dots.enabled?' and runs into the separator dots':' and meets the other text'}.`,fixLabel:'Shrink to fit',fix:x=>{const t=x.faces[fk][slot]; t.size=Math.max(10,Math.floor(t.size*maxAng/ang*0.97*10)/10); t.letter_spacing=Math.min(t.letter_spacing,1.2);}}); }
+      }
+      const T=F.top_text; if(T.text&&T.radius+0.72*T.size>R.r_inlay-1){ W.push({id:fk+'toprim',face:fk,where,msg:'Top text reaches into the rim; the tops of the letters will merge with it.',fixLabel:'Move text inward',fix:x=>{const t=x.faces[fk].top_text; t.radius=Math.round((R.r_inlay-1.5-0.72*t.size)*10)/10;}}); }
+      const B=F.bottom_text; if(/[gjpqy]/.test(B.text)&&B.radius+0.22*B.size>=R.r_inlay-2){ W.push({id:fk+'desc',face:fk,where,msg:'Descenders in the bottom text (g, j, p, q, y) touch the rim.',fixLabel:'Move text inward',fix:x=>{const t=x.faces[fk].bottom_text; t.radius=Math.round((R.r_inlay-2.5-0.22*t.size)*10)/10;}}); }
+      const I=F.icon; if(I){ const lim=R.divider?R.r_div_in:Math.min(T.text?T.radius:R.r_inlay,B.text?B.radius-0.72*B.size:R.r_inlay)-3; const off=Math.hypot(I.dx,I.dy); if(I.fit*R.r_div_in+off>lim+0.5){ W.push({id:fk+'icon',face:fk,where,msg:R.divider?'The emblem crosses the inner ring.':'The emblem runs into the lettering.',fixLabel:'Fit emblem inside',fix:x=>{const i=x.faces[fk].icon; i.fit=Math.max(0.2,Math.floor((lim-off)/R.r_div_in*100)/100);}}); } }
+    }
+    if(c.edge.style==='reeded'){ const pitch=Math.PI*c.size.diameter_mm/c.edge.teeth; if(pitch<2*noz){ const t=Math.floor(Math.PI*c.size.diameter_mm/(2*noz)); W.push({id:'teeth',face:null,where:'Edge',msg:`Reeding is ${pitch.toFixed(2)} mm apart; finer than your nozzle can draw.`,fixLabel:`Use ${t} teeth`,fix:x=>{x.edge.teeth=t;}}); } }
+    if(c.size.body_mm<1.5) W.push({id:'body',face:null,where:'Whole coin',msg:`A ${c.size.body_mm} mm body is fragile and may warp.`,fixLabel:'Use 2.0 mm',fix:x=>{x.size.body_mm=2;}});
+    return W.filter(w=>this.state.acked[w.id]!==w.msg);
+  }
+
+  // ---------- files ----------
+  onSave(){ const blob=new Blob([JSON.stringify(this.state.cfg,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=this.slug()+'.coin.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); this.toast(`Saved ${this.slug()}.coin.json. Open it later to keep editing, or send it to someone.`); }
+  async onJsonFile(e){ const file=e.target.files[0]; e.target.value=''; if(!file) return; try{ const cfg=normalize(JSON.parse(await file.text())); if(cfg.font.custom) await this.registerFont(cfg.font.custom.data); this.commit(cfg); this.setState({tplOpen:false,tab:'front',acked:{}}); this.toast(`Opened ${file.name}.`); }catch(err){ this.toast('That file is not a coin design this version can read.'); } }
+  async onLogoFile(file,fkIn){
+    if(!file) return; if(file.size>10e6){ this.toast('That image is over 10 MB. Try a smaller export.'); return; }
+    const fk=fkIn||this.fk(); const src=await readFile(file); const trace={threshold:128,invert:false};
+    let processed=await traceImage(src,trace).catch(()=>null);
+    if(!processed){ trace.invert=true; processed=await traceImage(src,trace).catch(()=>null); }
+    if(!processed){ this.toast('Could not find a shape in that image.'); return; }
+    const old=this.state.cfg.faces[fk].icon;
+    this.upd(c=>{ c.faces[fk].icon={kind:'upload',name:file.name,src,processed,trace,fit:old?old.fit:0.82,dx:0,dy:0,rot:0}; });
+  }
+  retrace(fk){ clearTimeout(this._trT); this._trT=setTimeout(async()=>{ const I=this.state.cfg.faces[fk].icon; if(!I||I.kind!=='upload') return; const p=await traceImage(I.src,I.trace).catch(()=>null); if(!p) return; this.upd(c=>{ if(c.faces[fk].icon) c.faces[fk].icon.processed=p; },'trace'+fk); },120); }
+  async registerFont(dataUrl){ try{ const buf=await (await fetch(dataUrl)).arrayBuffer(); const ff=new FontFace('CoinCustom',buf); await ff.load(); document.fonts.add(ff); this._last={}; this.forceUpdate(); }catch(e){} }
+  async onFontFile(e){ const file=e.target.files[0]; e.target.value=''; if(!file) return; if(file.size>2e6){ this.toast('Fonts can be up to 2 MB.'); return; } const data=await readFile(file); const ext=(file.name.split('.').pop()||'ttf').toLowerCase(); await this.registerFont(data); this.upd(c=>{ c.font={custom:{name:file.name.replace(/\.[^.]+$/,''),format:ext,data}}; }); this.toast(`Lettering now uses ${file.name}.`); }
+  async loadPoppins(){ try{ const css=await (await fetch('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&display=swap')).text(); for(const b of css.split('/*')){ if(!/^\s*latin \*\//.test(b)) continue; const w=(b.match(/font-weight:\s*(\d+)/)||[])[1], u=(b.match(/url\(([^)]+)\)/)||[])[1]; if(!w||!u) continue; const buf=await (await fetch(u)).arrayBuffer(); this.fontData[w]='data:font/woff2;base64,'+b64(buf); } if(this._dead) return; this.setState(s=>({fontsTick:s.fontsTick+1})); this.schedule3D(); }catch(e){} }
+  fontCss(c){ if(c.font.custom) return `@font-face{font-family:'CoinCustom';src:url(${c.font.custom.data})}`; const w=fontW(c), d=this.fontData[w]; return d?`@font-face{font-family:'Poppins';font-weight:${w};src:url(${d}) format('woff2')}`:''; }
+  exportFile(fmt){ this.setState({dlOpen:false,exporting:fmt}); setTimeout(()=>{ if(this._dead) return; this.setState({exporting:null}); this.toast(`${fmt} files are built by the print server from the same design. The server is not connected in this prototype.`); },1400); }
+
+  // ---------- 3D ----------
+  schedule3D(){ clearTimeout(this._t3); this._t3=setTimeout(()=>this.update3D(),260); }
+  observe(el){ if(this._ro) this._ro.disconnect(); this._ro=new ResizeObserver(()=>this.resize3D()); this._ro.observe(el); this.resize3D(); }
+  resize3D(){ const T=this.three, el=this.threeRef.current; if(!T||!el) return; const w=el.clientWidth||1, h=el.clientHeight||1; T.renderer.setSize(w,h,false); T.renderer.domElement.style.width='100%'; T.renderer.domElement.style.height='100%'; T.camera.aspect=w/h; const t=Math.tan(T.camera.fov*Math.PI/360); T.camera.position.z=Math.max(1.35/t,1.35/(t*T.camera.aspect)); T.camera.updateProjectionMatrix(); }
+  async init3D(){
+    const el=this.threeRef.current; if(!el||this._initing||this.three) return; this._initing=true;
+    let THREE; try{ THREE=await import('https://unpkg.com/three@0.160.0/build/three.module.js'); }catch(e){ this.setState({status3d:'3D preview could not load.'}); this._initing=false; return; }
+    if(this._dead) return;
+    const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true}); renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1)); renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05; renderer.outputColorSpace=THREE.SRGBColorSpace;
+    const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(26,1,0.1,100);
+    const env=new THREE.Scene(); env.add(new THREE.Mesh(new THREE.BoxGeometry(10,10,10),new THREE.MeshBasicMaterial({color:0x5a5c58,side:THREE.BackSide})));
+    for(const [x,y,z,i,s] of [[0,4,2,5,4],[-4,1,3,2.6,3],[4,-1,2.5,1.8,3],[0,-4,-2,1.2,4],[1,1,-4,1.5,3]]){ const m=new THREE.Mesh(new THREE.PlaneGeometry(s,s),new THREE.MeshBasicMaterial({side:THREE.DoubleSide})); m.material.color.setScalar(i); m.position.set(x,y,z); m.lookAt(0,0,0); env.add(m); }
+    const pm=new THREE.PMREMGenerator(renderer); scene.environment=pm.fromScene(env,0.03).texture;
+    const key=new THREE.DirectionalLight(0xffffff,1.1); key.position.set(2,3,4); scene.add(key);
+    const group=new THREE.Group(); scene.add(group);
+    const mk=n=>{const c=document.createElement('canvas'); c.width=c.height=n; return c;};
+    const alpha=mk(512), alphaT=new THREE.CanvasTexture(alpha);
+    const plane=new THREE.PlaneGeometry(2,2,320,320);
+    const T={THREE,renderer,scene,camera,group,faces:{},alpha,alphaT};
+    for(const fk of ['front','back']){
+      const col=mk(1024), hgt=mk(1024), orm=mk(1024);
+      const colT=new THREE.CanvasTexture(col); colT.colorSpace=THREE.SRGBColorSpace; colT.anisotropy=8;
+      const hT=new THREE.CanvasTexture(hgt), ormT=new THREE.CanvasTexture(orm);
+      const mat=new THREE.MeshStandardMaterial({map:colT,displacementMap:hT,bumpMap:hT,bumpScale:1.5,roughnessMap:ormT,metalnessMap:ormT,metalness:1,roughness:1,alphaMap:alphaT,alphaTest:0.5});
+      const mesh=new THREE.Mesh(plane,mat); if(fk==='back') mesh.rotation.y=Math.PI; group.add(mesh);
+      T.faces[fk]={col,hgt,orm,colT,hT,ormT,mat,mesh};
+    }
+    T.edgeMat=new THREE.MeshStandardMaterial({color:0xdca256,metalness:0.85,roughness:0.32});
+    this.three=T; this._initing=false;
+    el.appendChild(renderer.domElement); renderer.domElement.style.display='block'; this.observe(el);
+    const s=this._rot;
+    renderer.domElement.addEventListener('pointerdown',e=>{ s.drag={x:e.clientX,y:e.clientY,ty:s.ty,tx:s.tx}; renderer.domElement.setPointerCapture(e.pointerId); renderer.domElement.style.cursor='grabbing'; });
+    renderer.domElement.addEventListener('pointermove',e=>{ if(!s.drag) return; s.ty=s.drag.ty+(e.clientX-s.drag.x)*0.01; s.tx=clamp(s.drag.tx+(e.clientY-s.drag.y)*0.01,-1.3,1.3); });
+    const end=()=>{ s.drag=null; s.resume=performance.now()+3500; renderer.domElement.style.cursor='grab'; };
+    renderer.domElement.addEventListener('pointerup',end); renderer.domElement.addEventListener('pointercancel',end);
+    const tick=()=>{ if(this._dead) return; this._raf=requestAnimationFrame(tick); const now=performance.now(); if(this.props.autoRotate!==false&&!s.drag&&now>s.resume) s.ty+=0.0045; s.y+=(s.ty-s.y)*0.12; s.x+=(s.tx-s.x)*0.12; group.rotation.set(s.x,s.y,0); renderer.render(scene,camera); };
+    tick(); this.update3D();
+  }
+  setView(v){ const s=this._rot, base=Math.round(s.y/(Math.PI*2))*Math.PI*2; s.ty=base+(v==='back'?Math.PI:v==='edge'?Math.PI/2:0); s.tx=v==='edge'?0:-0.12; s.resume=performance.now()+6000; }
+  buildEdge(c){
+    const T=this.three, {THREE}=T; if(T.edge){ for(const m of T.edge){ T.group.remove(m); m.geometry.dispose(); } }
+    const k=2/c.size.diameter_mm, hh=(c.size.body_mm/2+c.size.relief_mm)*k;
+    const reeded=c.edge.style==='reeded', d=reeded?c.edge.depth/160:0, N=reeded?Math.min(c.edge.teeth*8,2400):256;
+    const rf=t=>edgeR(c,t)/160;
+    const pos=[], idx=[];
+    for(let i=0;i<=N;i++){ const t=i/N*Math.PI*2, r=rf(t), x=r*Math.cos(t), y=r*Math.sin(t); pos.push(x,y,hh,x,y,-hh); }
+    for(let i=0;i<N;i++){ const a=i*2,b=a+1,cc=a+2,dd=a+3; idx.push(a,b,cc,cc,b,dd); }
+    const side=new THREE.BufferGeometry(); side.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); side.setIndex(idx); side.computeVertexNormals();
+    const shape=new THREE.Shape(); for(let i=0;i<N;i++){ const t=i/N*Math.PI*2, r=rf(t); i?shape.lineTo(r*Math.cos(t),r*Math.sin(t)):shape.moveTo(r*Math.cos(t),r*Math.sin(t)); }
+    const hole=new THREE.Path(); hole.absarc(0,0,Math.max(0.5,1-d-0.004),0,Math.PI*2,true); shape.holes.push(hole);
+    const capG=new THREE.ShapeGeometry(shape,96);
+    const sideM=new THREE.Mesh(side,T.edgeMat), capA=new THREE.Mesh(capG,T.edgeMat), capB=new THREE.Mesh(capG.clone(),T.edgeMat);
+    capA.position.z=hh; capB.rotation.y=Math.PI; capB.position.z=-hh;
+    T.group.add(sideM,capA,capB); T.edge=[sideM,capA,capB];
+    const a=T.alpha.getContext('2d'); a.fillStyle='#000'; a.fillRect(0,0,512,512); a.fillStyle='#fff'; a.beginPath(); a.arc(256,256,256*(1-d),0,Math.PI*2); a.fill(); T.alphaT.needsUpdate=true;
+  }
+  async update3D(){
+    const T=this.three; if(!T) return; const v=++this._v3, c=this.state.cfg;
+    this.setState({status3d:'Updating…'});
+    const css=this.fontCss(c);
+    try{
+      const imgs=await Promise.all(['front','back'].flatMap(fk=>[loadImg(svgUrl(buildSVG(c,fk,'color',{fontCss:css,px:1024,idp:'c'+fk}))),loadImg(svgUrl(buildSVG(c,fk,'height',{fontCss:css,px:1024,idp:'h'+fk})))]));
+      if(v!==this._v3||this._dead) return;
+      const k=2/c.size.diameter_mm;
+      ['front','back'].forEach((fk,i)=>{
+        const F=T.faces[fk], ci=imgs[i*2], hi=imgs[i*2+1];
+        const cx=F.col.getContext('2d'); cx.clearRect(0,0,1024,1024); cx.drawImage(ci,0,0,1024,1024);
+        const hx=F.hgt.getContext('2d',{willReadFrequently:true}); hx.filter='none'; hx.fillStyle='#000'; hx.fillRect(0,0,1024,1024); hx.filter='blur(1.2px)'; hx.drawImage(hi,0,0,1024,1024); hx.filter='none';
+        const hd=hx.getImageData(0,0,1024,1024), ox=F.orm.getContext('2d'), od=ox.createImageData(1024,1024);
+        for(let p=0;p<hd.data.length;p+=4){ const h=hd.data[p]/255; od.data[p]=255; od.data[p+1]=Math.round(255*(0.78-0.46*h)); od.data[p+2]=Math.round(255*0.88*h); od.data[p+3]=255; }
+        ox.putImageData(od,0,0);
+        F.colT.needsUpdate=F.hT.needsUpdate=F.ormT.needsUpdate=true;
+        F.mat.displacementScale=c.size.relief_mm*k; F.mesh.position.z=(fk==='front'?1:-1)*c.size.body_mm/2*k;
+      });
+      const ek=[c.edge.style,c.edge.teeth,c.edge.depth,c.size.body_mm,c.size.relief_mm,c.size.diameter_mm].join('|');
+      if(ek!==T.edgeKey){ this.buildEdge(c); T.edgeKey=ek; }
+      T.edgeMat.color.set(colorOf(c.colors.relief,'relief').hex);
+      this.setState({status3d:''});
+    }catch(e){ this.setState({status3d:'3D preview could not update.'}); }
+  }
+
+  // ---------- view model ----------
+  sl(label,value,min,max,step,unit,set,key,o){ o=o||{}; const k=o.k||1, dp=o.dp==null?1:o.dp; const dmin=+(min*k).toFixed(dp), dmax=+(max*k).toFixed(dp), dv=+(value*k).toFixed(dp);
+    return {label,unit,min:dmin,max:dmax,step,value:dv,disabled:!!o.disabled,op:o.disabled?0.4:1,
+      onRange:e=>set(parseFloat(e.target.value)/k,key), onNum:e=>{const x=parseFloat(e.target.value); if(!isNaN(x)) set(x/k,key);}, onBlur:e=>{const x=parseFloat(e.target.value); set(clamp(isNaN(x)?dv:x,dmin,dmax)/k,key);} }; }
+  seg(items,cur,on){ return items.map((it,i)=>{const sel=it.value===cur; return Object.assign({},it,{selected:sel,bg:sel?INK:'#fff',fg:sel?'#fff':INK,divider:i?HAIR:'transparent',onClick:()=>on(it.value)});}); }
+  openPicker(target,fk,e){ const r=e.currentTarget.getBoundingClientRect(); const top=Math.max(12,Math.min(r.top-40,window.innerHeight-420)), left=Math.max(12,Math.min(408,window.innerWidth-712)); const ref=target==='relief'?this.state.cfg.colors.relief:this.state.cfg.faces[fk].inlay; const cur=catById(ref&&ref.filament); this.setState({pk:{target,fk,top,left,q:'',brand:cur?cur.brand:CAT_BRANDS[0],type:cur?cur.type:null}}); }
+  pickVals(){
+    const pk=this.state.pk; if(!pk) return {title:'',top:0,brands:[],types:[],colors:[],cur:{}};
+    const c=this.state.cfg, ref=pk.target==='relief'?c.colors.relief:c.faces[pk.fk].inlay, cur=colorOf(ref,pk.target);
+    const setPk=o=>this.setState(s=>({pk:Object.assign({},s.pk,o)}));
+    const q=pk.q.trim(), pool=q?CAT.filter(f=>catMatch(f,q)):CAT;
+    const brands=CAT_BRANDS.map(n=>({name:n,count:pool.filter(f=>f.brand===n).length})).filter(b=>b.count);
+    const brand=brands.find(b=>b.name===pk.brand)?pk.brand:(brands[0]&&brands[0].name);
+    const types=CAT_TYPES.filter(t=>t.brand===brand).map(t=>({t,cols:pool.filter(f=>f.brand===brand&&f.type===t.type)})).filter(x=>x.cols.length);
+    const type=types.find(x=>x.t.type===pk.type)?pk.type:(types[0]&&types[0].t.type);
+    const colors=pool.filter(f=>f.brand===brand&&f.type===type);
+    const choose=f=>{ const r={filament:f.id}; if(pk.target==='relief') this.upd(x=>{x.colors.relief=r;}); else this.upd(x=>{x.faces[pk.fk].inlay=r;}); this.setState({pk:null}); };
+    return {title:pk.target==='relief'?'Metal filament':'Enamel filament · '+pk.fk,top:pk.top,left:pk.left,q:pk.q,onQ:e=>setPk({q:e.target.value}),onClose:()=>this.setState({pk:null}),
+      brands:brands.map(b=>({...b,bg:b.name===brand?INK:'transparent',fg:b.name===brand?'#fff':INK,onClick:()=>setPk({brand:b.name,type:null})})),
+      types:types.map(x=>({name:x.t.type,count:x.cols.length,strip:x.cols.slice(0,9).map(f=>f.hex),bg:x.t.type===type?'#ecedeb':'transparent',onClick:()=>setPk({brand,type:x.t.type})})),
+      colors:colors.map(f=>({name:f.color,hex:f.hex,full:f.brand+' '+f.type+' '+f.color+' · '+f.hex,ring:f.id===cur.id?INK:'transparent',onClick:()=>choose(f)})),
+      colorTitle:type?type+' · '+colors.length+' colours':'No match',empty:!colors.length,
+      cur:{hex:cur.hex,full:cur.full,hexU:cur.hex.toUpperCase()}};
+  }
+  swatches(list,ref,on){ return list.map(f=>{const sel=!ref.hex&&ref.filament===f.id; return {name:f.name.replace(/^PLA /,''),note:f.measured?'measured':'PLA',hex:f.hex,selected:sel,border:sel?INK:RULE,onPick:()=>on({filament:f.id})};}); }
+
+  renderVals(){
+    const st=this.state, c=st.cfg, tab=st.tab, fk=this.fk(), F=c.faces[fk], other=fk==='front'?'back':'front';
+    const mmU=c.size.diameter_mm/320, W=this.warnings();
+    const reliefC=colorOf(c.colors.relief,'relief'), enF=colorOf(c.faces.front.inlay,'enamel'), enB=colorOf(c.faces.back.inlay,'enamel'), enCur=colorOf(F.inlay,'enamel');
+    const cnt=k=>W.filter(w=>w.face===k).length;
+    const tabs=[{key:'front',label:'Front',sub:'Face 1'},{key:'back',label:'Back',sub:'Face 2'},{key:'coin',label:'Whole coin',sub:'3D · size, edge, metal'}].map((t,i)=>({...t,active:tab===t.key,bg:tab===t.key?INK:'#fff',fg:tab===t.key?'#fff':INK,divider:i?HAIR:'transparent',onClick:()=>this.setState({tab:t.key})}));
+    const txtCtrls=slot=>{const T=F[slot]; return [
+      this.sl('Letter size',T.size,10,60,0.1,'mm',v=>this.uf(f=>{f[slot].size=v;},slot+'sz'),slot+'sz',{k:mmU,dp:1}),
+      this.sl('Spacing',T.letter_spacing,0,10,0.05,'mm',v=>this.uf(f=>{f[slot].letter_spacing=v;},slot+'ls'),slot+'ls',{k:mmU,dp:2})];};
+    const I=F.icon;
+    const iconThumb=I?(I.kind==='upload'?I.processed:svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-100 -100 200 200"><path d="${COMPASS}" transform="scale(1.18)" fill="${reliefC.hex}"/></svg>`)):'';
+    const f={
+      topText:F.top_text.text, bottomText:F.bottom_text.text, topCount:`${F.top_text.text.length}/40`, bottomCount:`${F.bottom_text.text.length}/40`,
+      onTopText:e=>{const v=e.target.value.slice(0,40); this.uf(x=>{x.top_text.text=v;},'tt');},
+      onBottomText:e=>{const v=e.target.value.slice(0,40); this.uf(x=>{x.bottom_text.text=v;},'bt');},
+      topCtrls:txtCtrls('top_text'), bottomCtrls:txtCtrls('bottom_text'),
+      dotsOn:F.dots.enabled, onDots:e=>{const v=e.target.checked; this.uf(x=>{x.dots.enabled=v;});},
+      hasIcon:!!I, noIcon:!I, isUpload:!!(I&&I.kind==='upload'), iconThumb, iconName:I?I.name:'', iconKind:I?(I.kind==='upload'?'Uploaded · traced to a raised outline':'Placeholder mark'):'',
+      onRemoveIcon:()=>this.uf(x=>{x.icon=null;}), onUseBuiltin:()=>this.uf(x=>{x.icon={kind:'builtin',name:'Placeholder mark',fit:0.82,dx:0,dy:0,rot:0};}),
+      onCenter:()=>this.uf(x=>{x.icon.dx=0;x.icon.dy=0;}),
+      invert:!!(I&&I.trace&&I.trace.invert), onInvert:e=>{const v=e.target.checked; this.uf(x=>{x.icon.trace.invert=v;}); this.retrace(fk);},
+      traceCtrls:I&&I.kind==='upload'?[this.sl('Threshold',I.trace.threshold,1,254,1,'',v=>{this.uf(x=>{x.icon.trace.threshold=Math.round(v);},'thr'); this.retrace(fk);},'thr',{dp:0})]:[],
+      iconCtrls:I?[
+        this.sl('Size',I.fit,0.2,1,1,'%',v=>this.uf(x=>{x.icon.fit=v;},'fit'),'fit',{k:100,dp:0}),
+        this.sl('Rotate',I.rot,-180,180,1,'°',v=>this.uf(x=>{x.icon.rot=v;},'rot'),'rot',{dp:0})]:[],
+      enamel:enCur, onPickEnamel:e=>this.openPicker('enamel',fk,e),
+      enamelHex:enCur.hex.toLowerCase(), enamelHexUpper:enCur.hex.toUpperCase(),
+      onEnamelHex:e=>{const v=e.target.value; this.uf(x=>{x.inlay={hex:v};},'enhex');},
+      copyLabel:`Copy emblem and enamel from the ${other}`,
+      onCopyOther:()=>this.upd(x=>{x.faces[fk].icon=x.faces[other].icon?JSON.parse(JSON.stringify(x.faces[other].icon)):null; x.faces[fk].inlay=Object.assign({},x.faces[other].inlay);})
+    };
+    const edgeText=c.edge.style==='reeded'?`reeded edge, ${c.edge.teeth} teeth`:'plain edge';
+    const toCoin=()=>this.setState({tab:'coin'});
+    const capRaw=[`Ø ${c.size.diameter_mm} mm`,`${c.size.body_mm} mm thick`,`${c.size.relief_mm} mm relief`,edgeText,`${reliefC.name} metal`, enF.name===enB.name?`${enF.name} enamel`:`${enF.name} / ${enB.name.replace(/^PLA /,'')} enamel`];
+    
+    const pv={
+      frontDisplay:tab==='front'?'block':'none', backDisplay:tab==='back'?'block':'none', coinDisplay:tab==='coin'?'block':'none',
+      hint:tab==='coin'?'Drag to turn the coin':(F.icon?(st.selIcon===fk?'Drag to move · corners to resize · top handle to rotate':'Click the emblem to move, resize or rotate it'):''),
+      downFront:e=>this.onDown('front',this.frontRef,e), downBack:e=>this.onDown('back',this.backRef,e),
+      moveFront:e=>this.onMove('front',this.frontRef,e), moveBack:e=>this.onMove('back',this.backRef,e),
+      up:e=>{ if(this._drag){ this._drag=null; e.currentTarget.style.cursor='grab'; } }
+    };
+    const warnings=W.map((w,i)=>({where:w.where==='Obverse'?'Front':w.where==='Reverse'?'Back':w.where,msg:w.msg,fixLabel:w.fixLabel,border:i?RULE:'transparent',
+      onFix:()=>{ this.upd(w.fix); if(w.face) this.setState({tab:w.face}); },
+      onAck:()=>this.setState(s=>({acked:Object.assign({},s.acked,{[w.id]:w.msg})}))}));
+    const css=st.tplOpen?this.fontCss({font:{key:'poppins-semibold'}}):'';
+    const templates=st.tplOpen?TEMPLATES.map(t=>{const cfg=t.make(); return {lot:t.lot,name:t.name,desc:t.desc,thumb:svgUrl(buildSVG(cfg,'front','preview',{fontCss:css,px:320,idp:'t'+t.lot})),onPick:()=>{this.commit(cfg); this.setState({tplOpen:false,tab:'front',acked:{}});}};}):[];
+    const presetCur=c.meta.preset;
+    const req=st.req, setReq=(k,v)=>this.setState(s=>({req:Object.assign({},s.req,{[k]:v}),reqError:''}));
+    return {
+      name:c.meta.name, onName:e=>{const v=e.target.value; this.upd(x=>{x.meta.name=v;},'name');}, fileName:this.slug()+'.coin.json',
+      onUndo:()=>this.undo(), onRedo:()=>this.redo(), undoDisabled:!this.past.length, redoDisabled:!this.future.length, undoOp:this.past.length?1:0.35, redoOp:this.future.length?1:0.35,
+      onTemplates:()=>this.setState({tplOpen:true}), onOpen:()=>this.jsonInput.current&&this.jsonInput.current.click(), onSave:()=>this.onSave(),
+      dlOpen:st.dlOpen, onDlToggle:()=>this.setState(s=>({dlOpen:!s.dlOpen})), dlLabel:st.exporting?`Preparing ${st.exporting}…`:'Download',
+      dlItems:[{label:'3MF · two colours',desc:'Metal and enamel as separate parts in one file. Best for AMS printers.',fmt:'3MF'},{label:'STL pair',desc:'Body and enamel as two files, for any slicer.',fmt:'STL pair'},{label:'STL · one colour',desc:'Geometry only. Swap filament at a layer for two tones.',fmt:'STL'}].map((d,i)=>({...d,border:i?RULE:'transparent',onClick:()=>this.exportFile(d.fmt)})),
+      onRequest:()=>this.setState({reqOpen:true,reqState:'form',reqError:''}),
+      tabs, tabHint:tab==='coin'?'Size, edge, metal and lettering, shared by both faces.':`Texts, emblem and enamel of the ${tab} face only.`,
+      isFace:tab!=='coin', isCoin:tab==='coin', f,
+      onUploadClick:()=>this.logoInput.current&&this.logoInput.current.click(),
+      onLogoFile:e=>{const file=e.target.files[0]; e.target.value=''; this.onLogoFile(file);},
+      onDragOver:e=>e.preventDefault(), onDrop:e=>{e.preventDefault(); this.onLogoFile(e.dataTransfer.files[0]);},
+      presets:Object.keys(PRESETS).map(k=>({name:PRESETS[k].name,desc:PRESETS[k].desc,selected:presetCur===k,border:presetCur===k?INK:RULE,mark:presetCur===k?INK:'transparent',onPick:()=>this.upd(x=>PRESETS[k].apply(x))})),
+      diamChips:[40,50,60].map(d=>({label:d+' mm',bg:c.size.diameter_mm===d?INK:'#fff',fg:c.size.diameter_mm===d?'#fff':INK,onClick:()=>this.upd(x=>{x.size.diameter_mm=d;})})),
+      sizeCtrls:[
+        this.sl('Diameter',c.size.diameter_mm,30,100,1,'mm',v=>this.upd(x=>{x.size.diameter_mm=v;},'diam'),null,{dp:0}),
+        this.sl('Thickness',c.size.body_mm,1,6,0.1,'mm',v=>this.upd(x=>{x.size.body_mm=v;},'body'),null,{dp:1}),
+        this.sl('Relief',c.size.relief_mm,0.3,2,0.1,'mm',v=>this.upd(x=>{x.size.relief_mm=v;},'relief'),null,{dp:1})],
+      edgeOpts:this.seg([{value:'reeded',label:'Reeded',sub:'Ridged, like a real coin'},{value:'plain',label:'Plain',sub:'Smooth, easiest to print'}],c.edge.style,v=>this.upd(x=>{x.edge.style=v;})),
+      teethCtrls:[this.sl('Teeth',c.edge.teeth,40,300,1,'',v=>this.upd(x=>{x.edge.teeth=Math.round(v);},'teeth'),null,{dp:0,disabled:c.edge.style!=='reeded'})],
+      relief:reliefC, onPickRelief:e=>this.openPicker('relief',null,e), pkOpen:!!st.pk, pk:this.pickVals(),
+      reliefHex:reliefC.hex.toLowerCase(), reliefHexUpper:reliefC.hex.toUpperCase(), onReliefHex:e=>{const v=e.target.value; this.upd(x=>{x.colors.relief={hex:v};},'relhex');},
+      fontOpts:[{value:'poppins-semibold',label:'Poppins SemiBold'},{value:'poppins-medium',label:'Poppins Medium'}].concat(c.font.custom?[{value:'custom',label:c.font.custom.name+' (uploaded)'}]:[]),
+      fontValue:c.font.custom?'custom':c.font.key, onFont:e=>{const v=e.target.value; if(v!=='custom') this.upd(x=>{x.font={key:v};});},
+      onFontUploadClick:()=>this.fontInput.current&&this.fontInput.current.click(), onFontFile:e=>this.onFontFile(e), onJsonFile:e=>this.onJsonFile(e),
+      nozzleOpts:this.seg([{value:0.2,label:'0.2 mm'},{value:0.4,label:'0.4 mm'},{value:0.6,label:'0.6 mm'}],c.print.nozzle_mm,v=>this.upd(x=>{x.print.nozzle_mm=v;})), nozzleLabel:c.print.nozzle_mm+' mm',
+      dividerOn:c.rings.divider, onDivider:e=>{const v=e.target.checked; this.upd(x=>{x.rings.divider=v;});},
+      advCtrls:[['Rim','r_inlay',null],['Ring outer','r_div_out',null],['Ring inner','r_div_in',null],['Top arc','top_text','f'],['Bottom arc','bottom_text','f'],['Reed depth','depth','e']].map(([label,key,kind])=>({label,step:0.5,
+        value:kind==='f'?c.faces.front[key].radius:kind==='e'?c.edge.depth:c.rings[key],
+        onNum:e=>{const v=parseFloat(e.target.value); if(isNaN(v)) return; this.upd(x=>{ if(kind==='f'){x.faces.front[key].radius=v;x.faces.back[key].radius=v;} else if(kind==='e') x.edge.depth=v; else x.rings[key]=v; },'adv'+key);} })),
+      pv, frontRef:this.frontRef, backRef:this.backRef, threeRef:this.threeRef, logoInput:this.logoInput, jsonInput:this.jsonInput, fontInput:this.fontInput,
+      warnings, noWarnings:!W.length, hasWarn:W.length>0, warnCount:W.length, warnTitle:W.length?`Check ${W.length} thing${W.length>1?'s':''} before printing`:'Ready to print',
+      status3d:st.status3d, panelTitle:tab==='front'?'Front':tab==='back'?'Back':'Whole coin',
+      viewBtns:[['Front','front'],['Back','back'],['Edge','edge']].map(([label,v],i)=>({label,divider:i?HAIR:'transparent',onClick:()=>this.setView(v)})),
+      tplOpen:st.tplOpen, templates, onCloseTpl:()=>this.setState({tplOpen:false}), stop:e=>e.stopPropagation(),
+      reqOpen:st.reqOpen, onCloseReq:()=>this.setState({reqOpen:false}), reqForm:st.reqState!=='sent', reqSent:st.reqState==='sent',
+      req:{name:req.name,email:req.email,message:req.message,attach:req.attach,hasError:!!st.reqError,error:st.reqError,sendLabel:st.reqState==='sending'?'Sending…':'Send request',
+        sentWhat:req.attach?` with ${this.slug()}.coin.json`:'',
+        onName:e=>setReq('name',e.target.value), onEmail:e=>setReq('email',e.target.value), onMessage:e=>setReq('message',e.target.value), onAttach:e=>setReq('attach',e.target.checked),
+        onSend:()=>{ if(!req.name.trim()) return this.setState({reqError:'Add your name so Daniel knows who it is from.'}); if(!/^\S+@\S+\.\S+$/.test(req.email)) return this.setState({reqError:'That email address does not look complete.'}); this.setState({reqState:'sending'}); setTimeout(()=>!this._dead&&this.setState({reqState:'sent'}),900); }},
+      hasToast:!!st.toast, toast:st.toast||''
+    };
+  }
+}
+</script>
+</body>
+</html>
