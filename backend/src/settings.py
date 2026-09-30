@@ -49,6 +49,17 @@ class Settings(BaseSettings):
     # icon traces; 3 leaves room for a request the browser already abandoned.
     client_max_exports: int = 1
     client_max_previews: int = 3
+    # Proxies whose X-Forwarded-For entries are skipped when finding the visitor:
+    # loopback and private ranges (Traefik, pods, the test client). Prod adds
+    # Cloudflare's ranges via TRUSTED_PROXIES (a JSON list).
+    trusted_proxies: list[str] = [
+        "127.0.0.0/8",
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "::1/128",
+        "fc00::/7",
+    ]
 
     # Data locations
     fonts_dir: Path = BACKEND_DIR / "fonts"

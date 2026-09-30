@@ -330,7 +330,7 @@ def _contact(**overrides) -> dict:
 def test_contact_without_attachment(api: TestClient, engine_container) -> None:
     mailer = engine_container.mailer()
     mailer.sent.clear()
-    response = api.post("/api/contact", json=_contact(), headers=_from("10.0.0.1"))
+    response = api.post("/api/contact", json=_contact(), headers=_from("203.0.113.1"))
     assert response.status_code == 202 and response.json() == {}
     assert len(mailer.sent) == 1
     assert mailer.sent[0]["to"] == engine_container.settings.contact_to
@@ -343,7 +343,9 @@ def test_contact_with_attachment(api: TestClient, engine_container) -> None:
     mailer.sent.clear()
     config = config_with(**{"meta.name": "Team Coin", "size.diameter_mm": 40}).to_json_dict()
     response = api.post(
-        "/api/contact", json=_contact(attach_design=True, config=config), headers=_from("10.0.0.2")
+        "/api/contact",
+        json=_contact(attach_design=True, config=config),
+        headers=_from("203.0.113.2"),
     )
     assert response.status_code == 202
     assert "Printability:" in mailer.sent[0]["text"]
@@ -371,13 +373,19 @@ def test_contact_is_rate_limited_per_client(api: TestClient, engine_container) -
     limit = engine_container.settings.contact_rate_limit
     for _ in range(limit):
         assert (
-            api.post("/api/contact", json=_contact(), headers=_from("10.9.9.9")).status_code == 202
+            api.post("/api/contact", json=_contact(), headers=_from("203.0.113.9")).status_code
+            == 202
         )
-    blocked = api.post("/api/contact", json=_contact(), headers=_from("10.9.9.9, 172.16.0.1"))
+    # A forged entry on the left does not make it a new client; the proxy on the
+    # right is skipped.
+    spoofed = _from("198.51.100.66, 203.0.113.9, 172.16.0.1")
+    blocked = api.post("/api/contact", json=_contact(), headers=spoofed)
     assert blocked.status_code == 429
     assert blocked.json()["detail"][0]["code"] == "rate_limited"
     assert int(blocked.headers["retry-after"]) > 0
-    assert api.post("/api/contact", json=_contact(), headers=_from("10.9.9.10")).status_code == 202
+    assert (
+        api.post("/api/contact", json=_contact(), headers=_from("203.0.113.10")).status_code == 202
+    )
 
 
 def test_metrics_report_builds_and_cache(api: TestClient) -> None:
@@ -403,10 +411,10 @@ def test_one_export_at_a_time_per_client(api: TestClient, engine_container) -> N
     # Own geometry: other tests leave a deliberately leaky default mesh in the cache.
     body = {**_body(config_with(**{"size.diameter_mm": 44})), "format": "stl"}
     limiter = engine_container.client_limiter()
-    with limiter.slot("10.7.7.7", "export"):
-        busy = api.post("/api/export", json=body, headers=_from("10.7.7.7"))
+    with limiter.slot("203.0.113.7", "export"):
+        busy = api.post("/api/export", json=body, headers=_from("203.0.113.7"))
         assert busy.status_code == 429 and busy.json()["detail"][0]["code"] == "rate_limited"
-        other = api.post("/api/export", json=body, headers=_from("10.7.7.8"))
+        other = api.post("/api/export", json=body, headers=_from("203.0.113.8"))
         assert other.status_code == 200
 
 

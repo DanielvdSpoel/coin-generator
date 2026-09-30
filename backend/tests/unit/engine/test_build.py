@@ -19,6 +19,7 @@ from src.core.engine.build import (
 )
 from src.core.engine.geometry import max_radius, polygons
 from src.core.engine.icons import geometry_to_config, trace_image
+from src.core.engine.materials import enamel_volumes
 from src.core.engine.quality import EXPORT, PREVIEW
 from src.core.engine.text import Glyphs
 from src.core.exceptions import NotWatertight
@@ -268,3 +269,14 @@ def test_enamel_area_is_the_field_minus_the_relief(built_default: BuiltCoin) -> 
         assert 0 < enamel.area < field_area
         assert enamel.intersection(relief).area < 1e-6
         assert max_radius(enamel) <= 143 * scale + 1e-3
+
+
+def test_a_polygon_earcut_mis_triangulates_is_repaired(glyphs) -> None:
+    """Fancy template, top text at size 39.5: earcut once returned a non-volume
+    for the face relief and every preview of that design failed with a 500."""
+    config = golden_config("fancy-example")
+    config.faces.front.top_text.size = 39.5
+    built = build_coin(config, glyphs, PREVIEW)
+    assert built.mesh.is_watertight and built.mesh.body_count == 1
+    volumes = enamel_volumes(built)
+    assert volumes.body.is_watertight

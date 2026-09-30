@@ -17,7 +17,9 @@ COPY --from=deps /app/.venv /app/.venv
 COPY src ./src
 COPY fonts ./fonts
 COPY data ./data
-ENV PATH="/app/.venv/bin:$PATH" MPLCONFIGDIR=/tmp/mpl ENVIRONMENT=prod
+# MALLOC_ARENA_MAX: build threads each grow a glibc arena that is rarely
+# returned; two arenas keep RSS close to what the mesh cache actually holds.
+ENV PATH="/app/.venv/bin:$PATH" MPLCONFIGDIR=/tmp/mpl ENVIRONMENT=prod MALLOC_ARENA_MAX=2
 USER 10001:10001
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/healthz', timeout=2).status == 200 else 1)"

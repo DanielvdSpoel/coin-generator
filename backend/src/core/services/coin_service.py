@@ -138,6 +138,7 @@ class CoinService:
             built.timings["union"] * 1e3,
             len(built.mesh.faces),
         )
+        _trim(built)
         self._cache.put(key, built, _mesh_size(built))
         return built
 
@@ -151,6 +152,7 @@ class CoinService:
         colors = resolve_colors(config, self._filaments)
         built = self.build(config, quality_for(quality))
         data = export.to_glb(built.mesh, classify_faces(built), colors)
+        _trim(built)
         self._cache.put(key, data, len(data))
         return GlbResult(data, etag, cached=False)
 
@@ -171,17 +173,32 @@ class CoinService:
                 data = export.to_3mf_prusa(volumes, colors, title)
             else:
                 data = export.to_stl_pair(volumes)
+        _trim(built)
         filename = f"{slugify(config.meta.name)}.{extension}"
         return ExportResult(data, filename, media_type, warnings)
 
     def stats(self, config: CoinConfig) -> CoinStats:
         """Size, filament per material and swap heights, from the cached preview mesh."""
-        return coin_stats(self.build(config, PREVIEW), resolve_colors(config, self._filaments))
+        built = self.build(config, PREVIEW)
+        stats = coin_stats(built, resolve_colors(config, self._filaments))
+        _trim(built)
+        return stats
 
     def face_svg(self, config: CoinConfig, face: FaceName, quality: QualityName = "export") -> str:
         glyphs = self._fonts.glyphs(config.font)
         colors = resolve_colors(config, self._filaments)
         return face_svg(config, face, glyphs, colors, quality_for(quality))
+
+
+def _trim(built: BuiltCoin) -> None:
+    """Drop trimesh's derived arrays (normals, adjacency, centroids…) from a mesh.
+
+    They are recomputed on demand, and on a cached coin they cost ~14 MB against
+    ~1 MB for the vertices and faces: without this the cache's size estimate is
+    off by an order of magnitude and a full cache outgrows the pod's memory
+    limit. Called before caching and after every use of a cached mesh.
+    """
+    built.mesh._cache.clear()
 
 
 def _mesh_size(built: BuiltCoin) -> int:

@@ -3,6 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from src.adapters.lru_mesh_cache import LruMeshCache
 from src.core.config.defaults import default_config
 from src.core.engine.build import BuiltCoin
 from src.core.engine.quality import EXPORT, PREVIEW
@@ -126,3 +127,14 @@ def test_slugify() -> None:
     assert slugify("") == "coin"
     assert slugify("!!!", "design") == "design"
     assert len(slugify("x" * 100)) == 60
+
+
+def test_cached_meshes_carry_no_derived_arrays(fonts, filaments) -> None:
+    """Derived trimesh arrays cost ~14x the mesh itself; the cache must not keep them."""
+    cache = LruMeshCache(64 * 1024 * 1024)
+    service = _service(fonts, filaments, cache)
+    config = default_config()
+    service.build_glb(config)
+    service.stats(config)
+    built = cache.get(next(k for k in cache._entries if k.startswith("mesh:")))
+    assert len(built.mesh._cache.cache) == 0

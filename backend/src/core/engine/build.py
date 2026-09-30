@@ -14,6 +14,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 
+import shapely
 import trimesh
 from shapely import affinity
 from shapely.geometry import Polygon
@@ -184,10 +185,38 @@ def extrude_parts(geom_mm: BaseGeometry, height: float, z: float) -> list[trimes
     for p in polygons(geom_mm):
         if p.area <= MIN_PART_AREA:
             continue
-        m = trimesh.creation.extrude_polygon(p, height, engine="earcut")
-        m.apply_translation([0, 0, z])
-        out.append(m)
+        for m in _extrude_closed(p, height):
+            m.apply_translation([0, 0, z])
+            out.append(m)
     return out
+
+
+def _extrude_closed(p: Polygon, height: float) -> list[trimesh.Trimesh]:
+    """Extrude one polygon into closed volumes.
+
+    Earcut occasionally triangulates a valid polygon into a mesh that is not a
+    volume (seen on the fancy template at one letter size: no open edges, but
+    degenerate triangles), and the union then refuses it. Snapping the outline
+    to a 1 nm grid, or failing that shrinking it by 0.1 µm, gives earcut clean
+    input without a change anyone could print. If both fail the original mesh
+    goes through and ``fuse`` reports it.
+    """
+    mesh = trimesh.creation.extrude_polygon(p, height, engine="earcut")
+    if mesh.is_volume:
+        return [mesh]
+    for repaired in (
+        shapely.set_precision(p, 1e-6),
+        p.buffer(-1e-4, join_style="mitre"),
+    ):
+        meshes = [
+            trimesh.creation.extrude_polygon(q, height, engine="earcut")
+            for q in polygons(repaired)
+            if q.area > MIN_PART_AREA
+        ]
+        if meshes and all(m.is_volume for m in meshes):
+            logger.info("extrusion repaired (area %.2f mm²)", p.area)
+            return meshes
+    return [mesh]
 
 
 def extrude(
