@@ -26,4 +26,19 @@ Without Docker: `make dev-backend` and `make dev-frontend` in two terminals. The
 Vite dev server proxies `/api` to the backend, the same way the Ingress does in
 preview and prod.
 
+## Engine CLI
+
+The geometry engine runs without the API. Paths are relative to `backend/`; use
+`default` instead of a file for the built-in starting design.
+
+```bash
+cd backend
+uv run python -m src.cli build data/my.coin.json out.stl   # also .glb, .3mf, .zip (STL pair)
+uv run python -m src.cli validate default                  # printability warnings
+uv run python -m src.cli svg default --face back > back.svg
+uv run python -m src.cli bench default                     # build timings per quality
+```
+
+`make filaments-snapshot` refreshes the committed filamentcolors.xyz snapshot.
+
 Every pull request gets a preview environment at `pr-<n>.coins.danielvdspoel.com`; see [`deploy/README.md`](deploy/README.md).

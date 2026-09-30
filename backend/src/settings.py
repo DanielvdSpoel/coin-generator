@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     fonts_dir: Path = BACKEND_DIR / "fonts"
     data_dir: Path = BACKEND_DIR / "data"
 
+    # Filament colours (decision D5). 0 hours disables the network: the committed
+    # snapshot is served as is, which is what tests and offline dev want.
+    filamentcolors_url: str = "https://filamentcolors.xyz"
+    filamentcolors_refresh_hours: float = 0
+    filamentcolors_timeout_s: float = 10
+
     @property
     def is_dev(self) -> bool:
         return self.environment == "dev"

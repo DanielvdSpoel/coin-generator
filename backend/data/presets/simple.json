@@ -1,0 +1,21 @@
+{
+  "id": "simple",
+  "name": "Simple",
+  "description": "Plain edge, no dots, a thin divider ring and slightly larger text.",
+  "patch": {
+    "edge": { "style": "plain" },
+    "rings": { "r_rim": 155, "r_inlay": 147, "divider": true, "r_div_out": 111, "r_div_in": 105 },
+    "faces": {
+      "front": {
+        "top_text": { "size": 28, "letter_spacing": 1.0, "radius": 118.8 },
+        "bottom_text": { "size": 28, "letter_spacing": 1.0, "radius": 137.7 },
+        "dots": { "enabled": false }
+      },
+      "back": {
+        "top_text": { "size": 28, "letter_spacing": 1.0, "radius": 118.8 },
+        "bottom_text": { "size": 28, "letter_spacing": 1.0, "radius": 137.7 },
+        "dots": { "enabled": false }
+      }
+    }
+  }
+}

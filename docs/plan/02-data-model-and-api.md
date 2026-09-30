@@ -70,6 +70,9 @@ through every endpoint and through template files. Radii and offsets are in
 ### Rules the pydantic model enforces (422 on failure)
 
 - Radius ordering as above, with a minimum gap of 2 units between neighbours.
+  With a reeded edge, `r_inlay` must also stay 2 units inside `r_edge - edge.depth`.
+- `2 × print.enamel_depth_mm + 0.2 ≤ size.body_mm`, so the two enamel pockets never
+  meet.
 - Text: max 40 characters per line, printable characters only; empty string allowed
   (means "no text on that arc").
 - `size` 10..60, `letter_spacing` 0..10, `radius` between `r_div_out + 4` and
@@ -80,7 +83,7 @@ through every endpoint and through template files. Radii and offsets are in
   `data` ≤ 2 MB decoded, `format` in ttf/otf/woff/woff2, must parse with fontTools
   and contain a `glyf` or `CFF ` table. `sha256` must match `data` (cache key).
 - Icon geometry: valid polygons, ≤ `max_icon_vertices` (50 000, D14) total, every
-  point within radius 100.
+  point within radius 100 (100.01, to absorb rounding on serialisation).
 - `schema_version` ≤ current; older versions are migrated on read, newer rejected.
 
 ### Colour resolution
@@ -170,7 +173,7 @@ All JSON in, JSON or binary out. Prefix `/api`. All geometry endpoints accept
 | code | severity | check |
 |---|---|---|
 | `thin_stroke` | warn / error | `0.15 * size * diameter_mm/320 < 1.5 * nozzle_mm` (error below 1.0×) |
-| `descender_collision` | warn | bottom-text max radius (per-glyph bounds) ≥ `r_inlay - 2` |
+| `descender_collision` | warn | bottom-text max radius (per-glyph bounds) ≥ `r_inlay - 1.5` |
 | `text_overlap` | warn | top and bottom arcs overlap angularly |
 | `icon_overlap` | warn | icon bounds cross `r_div_in` (or `r_inlay` without divider) |
 | `icon_thin_feature` | warn | thinnest icon feature below nozzle width at this diameter |

@@ -1,0 +1,21 @@
+{
+  "id": "fancy",
+  "name": "Fancy",
+  "description": "Reeded edge, separator dots and a wide divider ring.",
+  "patch": {
+    "edge": { "style": "reeded", "teeth": 120, "depth": 2.0 },
+    "rings": { "r_rim": 151, "r_inlay": 143, "divider": true, "r_div_out": 113, "r_div_in": 101 },
+    "faces": {
+      "front": {
+        "top_text": { "size": 26, "letter_spacing": 1.2, "radius": 118.5 },
+        "bottom_text": { "size": 26, "letter_spacing": 1.2, "radius": 134.2 },
+        "dots": { "enabled": true }
+      },
+      "back": {
+        "top_text": { "size": 26, "letter_spacing": 1.2, "radius": 118.5 },
+        "bottom_text": { "size": 26, "letter_spacing": 1.2, "radius": 134.2 },
+        "dots": { "enabled": true }
+      }
+    }
+  }
+}

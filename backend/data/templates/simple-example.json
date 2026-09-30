@@ -1,0 +1,167 @@
+{
+ "id": "simple-example",
+ "name": "Simple example",
+ "description": "60 mm, plain edge, thin divider, larger text.",
+ "config": {
+  "schema_version": 1,
+  "meta": {
+   "name": "Simple example",
+   "notes": "",
+   "created_with": "coin-designer 0.1.0"
+  },
+  "size": {
+   "diameter_mm": 60.0,
+   "body_mm": 3.4,
+   "relief_mm": 0.8
+  },
+  "edge": {
+   "style": "plain",
+   "teeth": 120,
+   "depth": 2.0
+  },
+  "rings": {
+   "r_edge": 160.0,
+   "r_rim": 155.0,
+   "r_inlay": 147.0,
+   "divider": true,
+   "r_div_out": 111.0,
+   "r_div_in": 105.0
+  },
+  "font": {
+   "key": "poppins-medium"
+  },
+  "colors": {
+   "relief": {
+    "filament": "local-bambu-pla-silk-silver"
+   }
+  },
+  "faces": {
+   "front": {
+    "inlay": {
+     "filament": "local-bambu-pla-matte-dark-blue"
+    },
+    "top_text": {
+     "text": "PLAIN AND SIMPLE",
+     "size": 28.0,
+     "letter_spacing": 1.0,
+     "radius": 118.8
+    },
+    "bottom_text": {
+     "text": "No reeding, no dots",
+     "size": 28.0,
+     "letter_spacing": 1.0,
+     "radius": 137.7
+    },
+    "dots": {
+     "enabled": false,
+     "radius": 5.0
+    },
+    "icon": {
+     "geometry": {
+      "polygons": [
+       {
+        "exterior": [
+         [
+          0.0,
+          100.0
+         ],
+         [
+          -22.961,
+          55.433
+         ],
+         [
+          -70.711,
+          70.711
+         ],
+         [
+          -55.433,
+          22.961
+         ],
+         [
+          -100.0,
+          0.0
+         ],
+         [
+          -55.433,
+          -22.961
+         ],
+         [
+          -70.711,
+          -70.711
+         ],
+         [
+          -22.961,
+          -55.433
+         ],
+         [
+          -0.0,
+          -100.0
+         ],
+         [
+          22.961,
+          -55.433
+         ],
+         [
+          70.711,
+          -70.711
+         ],
+         [
+          55.433,
+          -22.961
+         ],
+         [
+          100.0,
+          -0.0
+         ],
+         [
+          55.433,
+          22.961
+         ],
+         [
+          70.711,
+          70.711
+         ],
+         [
+          22.961,
+          55.433
+         ]
+        ],
+        "holes": []
+       }
+      ]
+     },
+     "fit": 0.86,
+     "dx": 0.0,
+     "dy": 0.0,
+     "rot": 0.0
+    }
+   },
+   "back": {
+    "inlay": {
+     "hex": "#141414"
+    },
+    "top_text": {
+     "text": "SIXTY MILLIMETRES",
+     "size": 28.0,
+     "letter_spacing": 1.0,
+     "radius": 118.8
+    },
+    "bottom_text": {
+     "text": "A medallion, not a disc",
+     "size": 28.0,
+     "letter_spacing": 1.0,
+     "radius": 137.7
+    },
+    "dots": {
+     "enabled": false,
+     "radius": 5.0
+    },
+    "icon": null
+   }
+  },
+  "print": {
+   "nozzle_mm": 0.4,
+   "enamel_depth_mm": 0.4
+  }
+ }
+}

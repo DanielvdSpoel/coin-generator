@@ -1,0 +1,16 @@
+[
+  {
+    "key": "poppins-semibold",
+    "name": "Poppins SemiBold",
+    "single_story_a": true,
+    "ttf": "Poppins-SemiBold.ttf",
+    "woff2": "Poppins-SemiBold.woff2"
+  },
+  {
+    "key": "poppins-medium",
+    "name": "Poppins Medium",
+    "single_story_a": true,
+    "ttf": "Poppins-Medium.ttf",
+    "woff2": "Poppins-Medium.woff2"
+  }
+]

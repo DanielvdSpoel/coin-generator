@@ -6,6 +6,8 @@
 #   make helm-lint  lint and render both Helm umbrella charts
 #   make images     build both container images locally
 #   make types      OpenAPI → frontend/src/types/api.d.ts   (wired in phase 2)
+#   make coin ARGS="build default out.stl"   run the engine CLI
+#   make filaments-snapshot   refresh backend/data/filaments.snapshot.json
 #
 # Targets are phony: they run commands, they do not build files.
 
@@ -15,7 +17,8 @@ UV ?= uv
 NPM ?= npm --prefix frontend
 
 .PHONY: help dev dev-backend dev-frontend install test test-backend test-frontend \
-        lint lint-backend lint-frontend format helm-lint images types clean
+        lint lint-backend lint-frontend format helm-lint images types clean \
+        coin filaments-snapshot
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -70,6 +73,12 @@ images: ## Build both container images locally
 
 types: ## Generate frontend/src/types/api.d.ts from the backend OpenAPI schema (phase 2)
 	@echo "wired in phase 2: uv run python -m src.cli openapi | npx openapi-typescript"
+
+coin: ## Engine CLI, e.g. make coin ARGS="build default out.stl" (paths relative to backend/)
+	cd backend && $(UV) run python -m src.cli $(ARGS)
+
+filaments-snapshot: ## Refresh the committed filamentcolors.xyz snapshot
+	cd backend && $(UV) run python -m src.cli filaments-snapshot
 
 clean: ## Remove build artefacts and caches
 	rm -rf backend/.venv backend/.pytest_cache backend/.ruff_cache frontend/node_modules frontend/dist deploy/*/charts

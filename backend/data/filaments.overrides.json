@@ -1,0 +1,34 @@
+[
+  {
+    "id": "local-bambu-pla-silk-gold",
+    "name": "Gold",
+    "vendor": "Bambu Lab",
+    "material": "PLA",
+    "finish": "PLA Silk+",
+    "hex": "#dca256"
+  },
+  {
+    "id": "local-bambu-pla-silk-silver",
+    "name": "Silver",
+    "vendor": "Bambu Lab",
+    "material": "PLA",
+    "finish": "PLA Silk+",
+    "hex": "#b9c0c4"
+  },
+  {
+    "id": "local-bambu-pla-matte-dark-blue",
+    "name": "Dark Blue",
+    "vendor": "Bambu Lab",
+    "material": "PLA",
+    "finish": "PLA Matte",
+    "hex": "#395064"
+  },
+  {
+    "id": "local-bambu-pla-basic-blue",
+    "name": "Blue",
+    "vendor": "Bambu Lab",
+    "material": "PLA",
+    "finish": "PLA Basic",
+    "hex": "#0a2989"
+  }
+]
