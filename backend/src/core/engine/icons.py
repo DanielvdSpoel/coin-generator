@@ -80,30 +80,52 @@ def place_icon(geom: BaseGeometry, placement: IconPlacement, r_limit: float) -> 
     return geom
 
 
-def trace_image(
-    image: Image.Image,
-    simplify: float = 0.4,
-    threshold: int = 128,
-    invert: bool = False,
-) -> BaseGeometry:
-    """Raster → normalised geometry by marching squares.
+def ink_mask(image: Image.Image, threshold: int = 128, invert: bool = False) -> np.ndarray:
+    """Boolean ink mask of an image (unpadded).
 
     Uses alpha when the image has real transparency, darkness otherwise (``invert``
-    flips that: light pixels become ink). The ``simplify`` removes the pixel
-    stair-steps that would otherwise triangulate into degenerate faces (engine
-    gotcha #3); the Y flip turns image rows into Y-up geometry (gotcha #5).
+    flips that: light pixels become ink).
     """
-    from skimage import measure
-
     a = np.array(image.convert("RGBA"))
+    darkness = 255 - a[:, :, :3].min(2)
     if a[:, :, 3].min() < 250:
         mask = a[:, :, 3] > threshold
+        # A badge rasterised from SVG is opaque inside its outline with white fills
+        # for the "paper": when the opaque area holds both dark ink and near-white,
+        # the near-white is background, not ink. A plain coloured mark is unaffected.
+        opaque = darkness[mask]
+        if opaque.size and (opaque > 128).any() and (opaque < 20).any():
+            mask &= darkness >= 20
     else:
-        mask = a[:, :, :3].min(2) < (255 - threshold)
+        mask = darkness > threshold
     if invert:
         mask = ~mask
     if not mask.any():
         raise IconTraceFailed("nothing to trace: the image has no ink")
+    return mask
+
+
+def mask_warnings(mask: np.ndarray, photo_components: int = 40) -> list[str]:
+    """Warning codes read off the raw mask: ``touches_edge`` and ``photo_like``."""
+    from scipy import ndimage
+
+    codes = []
+    if mask[0].any() or mask[-1].any() or mask[:, 0].any() or mask[:, -1].any():
+        codes.append("touches_edge")
+    if ndimage.label(mask)[1] > photo_components:
+        codes.append("photo_like")
+    return codes
+
+
+def trace_mask(mask: np.ndarray, simplify: float = 0.4) -> BaseGeometry:
+    """Ink mask → normalised geometry by marching squares.
+
+    The ``simplify`` removes the pixel stair-steps that would otherwise triangulate
+    into degenerate faces (engine gotcha #3); the Y flip turns image rows into
+    Y-up geometry (gotcha #5).
+    """
+    from skimage import measure
+
     mask = np.pad(mask.astype(np.uint8), 2)  # pad so shapes touching the border close
     loops = [
         np.column_stack([c[:, 1], c[:, 0]])  # (row, col) → (x, y)
@@ -115,40 +137,87 @@ def trace_image(
     return normalise(geom)
 
 
+def trace_image(
+    image: Image.Image,
+    simplify: float = 0.4,
+    threshold: int = 128,
+    invert: bool = False,
+) -> BaseGeometry:
+    """Raster → normalised geometry: ``ink_mask`` then ``trace_mask``."""
+    return trace_mask(ink_mask(image, threshold, invert), simplify)
+
+
+THIN_RING_FILL = 0.35
+THIN_RING_SPAN = 0.6
+BADGE_RATIO = 4.0
+BADGE_SPAN = 0.8
+
+
+def _span(part: BaseGeometry, extent: tuple[float, float, float, float]) -> float:
+    """The larger of a part's width/height as a fraction of the full extent."""
+    minx, miny, maxx, maxy = part.bounds
+    width, height = extent[2] - extent[0], extent[3] - extent[1]
+    return max((maxx - minx) / width if width else 0, (maxy - miny) / height if height else 0)
+
+
+def is_thin_ring(part: BaseGeometry, extent: tuple[float, float, float, float]) -> bool:
+    """A decorative ring: a big bounding box that the ink barely fills."""
+    minx, miny, maxx, maxy = part.bounds
+    bbox_area = (maxx - minx) * (maxy - miny)
+    if bbox_area <= 0:
+        return False
+    return part.area / bbox_area < THIN_RING_FILL and _span(part, extent) > THIN_RING_SPAN
+
+
 def isolate(
     geom: BaseGeometry,
     drop_largest: bool = False,
     inner_disc: float | None = None,
     min_area: float = 0.0,
+    drop_thin_rings: bool = True,
 ) -> tuple[BaseGeometry, list[str]]:
     """Badge isolation on a traced geometry (``coin-tool-addendum.md`` §1).
 
     ``drop_largest`` removes the biggest part (a coin body around the logo);
-    ``inner_disc`` keeps only parts whose centroid lies within that fraction of the
-    max radius; ``min_area`` drops parts below that fraction of the total area.
-    Returns the surviving geometry and human-readable notes on what was removed.
+    ``drop_thin_rings`` removes decorative rings (``is_thin_ring``) as long as they
+    are not the only part; ``inner_disc`` keeps only parts whose centroid lies
+    within that fraction of the max radius; ``min_area`` drops parts below that
+    fraction of the total area. Returns the surviving geometry and warning codes:
+    ``largest_dropped``, ``looks_like_badge``, ``thin_ring_dropped``,
+    ``outside_inner_disc_dropped``, ``tiny_parts_dropped``.
     """
-    parts = list(polygons(geom))
-    notes: list[str] = []
-    if drop_largest and len(parts) > 1:
-        largest = max(parts, key=lambda p: p.area)
-        parts = [p for p in parts if p is not largest]
-        notes.append("largest part removed as background")
+    parts = sorted(polygons(geom), key=lambda p: p.area, reverse=True)
+    extent = geom.bounds
+    codes: list[str] = []
+    dominant = None
+    if len(parts) > 1:
+        if drop_largest:
+            parts = parts[1:]
+            codes.append("largest_dropped")
+        elif parts[0].area > BADGE_RATIO * parts[1].area and _span(parts[0], extent) > BADGE_SPAN:
+            dominant = parts[0]
+    if drop_thin_rings and len(parts) > 1:
+        kept = [p for p in parts if not is_thin_ring(p, extent)]
+        if kept and len(kept) < len(parts):
+            codes.append("thin_ring_dropped")
+            parts = kept
+    if dominant is not None and dominant in parts:  # a badge body that is still there
+        codes.append("looks_like_badge")
     if inner_disc is not None and parts:
         limit = inner_disc * max_radius(geom)
         kept = [p for p in parts if math.hypot(p.centroid.x, p.centroid.y) <= limit]
         if len(kept) < len(parts):
-            notes.append(f"{len(parts) - len(kept)} part(s) outside the inner disc removed")
+            codes.append("outside_inner_disc_dropped")
         parts = kept
     if min_area > 0 and parts:
         total = sum(p.area for p in parts)
         kept = [p for p in parts if p.area >= min_area * total]
         if len(kept) < len(parts):
-            notes.append(f"{len(parts) - len(kept)} tiny part(s) removed")
+            codes.append("tiny_parts_dropped")
         parts = kept
     if not parts:
         raise IconTraceFailed("nothing left after isolation; relax the filters")
-    return unary_union(parts), notes
+    return unary_union(parts), codes
 
 
 def trace_png(source: str | Path | bytes, simplify: float = 0.4) -> BaseGeometry:

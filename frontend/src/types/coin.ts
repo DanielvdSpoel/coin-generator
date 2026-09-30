@@ -27,6 +27,7 @@ export type CoinConfig = Omit<CompleteConfig, 'colors' | 'faces'> & {
 }
 export type TextConfig = FaceConfig['top_text']
 export type FontRef = CoinConfig['font']
+export type CustomFont = Schemas['CustomFont']
 export type IconPlacement = Exclude<FaceConfig['icon'], null>
 export type IconGeometry = IconPlacement['geometry']
 export type IconPolygon = IconGeometry['polygons'][number]

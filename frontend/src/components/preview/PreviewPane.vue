@@ -134,6 +134,7 @@ watch(
         <SvgFace
           :model="ui.tab === 'back' ? back : front"
           :label="ui.tab === 'back' ? t('preview.backLabel') : t('preview.frontLabel')"
+          interactive
         />
       </div>
       <template v-else-if="threeD">

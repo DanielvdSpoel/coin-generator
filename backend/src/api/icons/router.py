@@ -21,7 +21,7 @@ async def trace(
     file: Annotated[UploadFile, File()],
     options: Annotated[str | None, Form(description="JSON TraceOptions")] = None,
 ) -> TraceResponse:
-    """Trace an uploaded PNG or JPEG into icon geometry. Stateless: nothing is stored."""
+    """Trace an uploaded PNG, JPEG or SVG into icon geometry. Stateless: nothing is stored."""
     try:
         parsed = TraceOptionsBody.model_validate(json.loads(options) if options else {})
     except (ValueError, ValidationError) as exc:

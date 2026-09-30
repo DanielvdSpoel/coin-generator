@@ -55,7 +55,7 @@
     "obverse": "Obverse",
     "reverse": "Reverse",
     "bothHint": "Both faces at the same scale. The 3D view arrives in phase 4.",
-    "iconHint": "Move, resize and rotate the emblem from the Emblem notes.",
+    "iconHint": "Drag the emblem to move it · scroll to resize · shift+scroll to rotate · corner and top handles when selected.",
     "warningsOnFace": "{n} thing to check on this face | {n} things to check on this face"
   },
   "three": {
@@ -98,7 +98,8 @@
     "bottomPlaceholder": "e.g. Est. 2021",
     "letterSize": "Letter size",
     "spacing": "Spacing",
-    "dots": "Separator dots between the two texts"
+    "dots": "Separator dots between the two texts",
+    "missingGlyph": "The font has no glyph for: {chars}"
   },
   "emblem": {
     "placeholder": "Placeholder mark",
@@ -107,13 +108,19 @@
     "uploadedKind": "{n} shape, {v} points | {n} shapes, {v} points",
     "remove": "Remove",
     "upload": "Upload a logo",
-    "uploadSoon": "Logo upload arrives in phase 5. Until then, start from a template or use the placeholder mark.",
     "usePlaceholder": "Use the placeholder mark",
     "size": "Size",
     "rotate": "Rotate",
     "offsetX": "Across",
     "offsetY": "Up",
-    "recentre": "Re-centre"
+    "recentre": "Re-centre",
+    "uploadHint": "PNG, JPEG or SVG, up to 10 MB. Dark shapes on a light background trace best.",
+    "uploadOffline": "PNG, JPEG or SVG, up to 10 MB. Tracing needs the server, which is not reachable right now.",
+    "replace": "Replace",
+    "keep": "Keep the current emblem",
+    "copyFromOther": "Copy from the {face}",
+    "fromLibrary": "From library ({n})",
+    "dragHint": "Or drag the emblem on the preview."
   },
   "colour": {
     "change": "Change",
@@ -155,8 +162,8 @@
     "font": "Font",
     "hint": "One font for the whole coin. TTF, OTF or WOFF, up to 2 MB.",
     "upload": "Upload a font",
-    "uploadSoon": "Font upload arrives in phase 5.",
-    "custom": "{name} (uploaded)"
+    "custom": "{name} (uploaded)",
+    "uploadOffline": "Font upload needs the server, which is not reachable right now."
   },
   "printer": {
     "nozzle": "Nozzle",
@@ -241,5 +248,77 @@
     "pct": "%",
     "deg": "°",
     "u": "u"
+  },
+  "dropzone": {
+    "hint": "Drop a file here or choose one.",
+    "wrongType": "That file type is not supported here.",
+    "tooLarge": "That file is too large."
+  },
+  "trace": {
+    "title": "Trace a logo",
+    "cancel": "Cancel",
+    "source": "Your image",
+    "result": "Traced outline",
+    "counts": "{parts} shapes · {holes} holes",
+    "tracing": "Tracing…",
+    "hint": "The outline updates as you change the knobs.",
+    "threshold": "Threshold",
+    "simplify": "Simplify",
+    "minArea": "Min. area",
+    "innerDisc": "Inner disc",
+    "innerDiscOn": "Keep only the inner disc",
+    "invert": "Invert (light shapes on dark)",
+    "dropLargest": "Drop the largest shape (a badge outline)",
+    "dropThinRings": "Drop thin rings",
+    "embedSource": "Embed the source image",
+    "embedSourceNote": "makes the design file bigger",
+    "use": "Use this icon",
+    "errors": {
+      "tooLarge": "The image is too large for the server. Shrink it and try again.",
+      "rejected": "The server could not trace this image.",
+      "network": "The server is not reachable, so the image could not be traced."
+    },
+    "warnings": {
+      "looks_like_badge": "This looks like a whole badge: try dropping the largest shape and keeping the inner disc.",
+      "thin_ring_dropped": "A thin ring was dropped; it would not print.",
+      "n_parts_kept": "Only the biggest shapes were kept.",
+      "touches_edge": "The drawing touches the image edge; it may be cut off.",
+      "icon_simplified": "The outline was simplified to keep the file small.",
+      "photo_like": "This looks like a photo; a flat logo traces better.",
+      "largest_dropped": "The largest shape was dropped.",
+      "outside_inner_disc_dropped": "Shapes outside the inner disc were dropped.",
+      "tiny_parts_dropped": "Tiny specks were dropped."
+    }
+  },
+  "library": {
+    "use": "Use",
+    "useAgain": "Use again",
+    "inUse": "In use",
+    "recentFonts": "Recent fonts"
+  },
+  "fontUpload": {
+    "title": "Upload a font",
+    "intro": "TTF, OTF, WOFF or WOFF2, up to 2 MB.",
+    "cancel": "Cancel",
+    "choose": "Choose a font file",
+    "hint": "Drop a font here or choose one. Larger than 2 MB? Convert it to WOFF2 first.",
+    "inspecting": "Reading the font…",
+    "family": "Family",
+    "style": "Style",
+    "glyphs": "Glyphs",
+    "glyphCount": "{n} glyphs",
+    "licence": "The font is embedded in your design file and sent to the server only to build your coin. Make sure you may use it.",
+    "use": "Use this font",
+    "errors": {
+      "tooLarge": "That font is larger than 2 MB. Convert it to WOFF2 and try again.",
+      "rejected": "The server could not read this font.",
+      "network": "The server is not reachable, so the font could not be checked.",
+      "read": "The font file could not be read in this browser."
+    },
+    "warnings": {
+      "no_lowercase": "No lowercase letters: lowercase text will show as missing glyphs.",
+      "no_digits": "No digits: numbers will show as missing glyphs.",
+      "variable_font": "A variable font: the default instance is used."
+    }
   }
 }

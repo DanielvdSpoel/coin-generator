@@ -5,13 +5,24 @@ import { useI18n } from 'vue-i18n'
 import DetailsGroup from '@/components/common/DetailsGroup.vue'
 import RangeField from '@/components/common/RangeField.vue'
 import { useCoinStore } from '@/stores/coin'
+import { useUiStore } from '@/stores/ui'
 import { DESIGN_DIAMETER, MAX_TEXT_LENGTH, type FaceName, type TextSlot } from '@/types/coin'
 
 const props = defineProps<{ face: FaceName }>()
 const { t } = useI18n()
 const coin = useCoinStore()
+const ui = useUiStore()
 const f = computed(() => coin.config.faces[props.face])
 const mmPerUnit = computed(() => coin.config.size.diameter_mm / DESIGN_DIAMETER)
+
+/** The characters the font lacks, from the server's `missing_glyph` warning for this text. */
+function missingGlyphs(slot: TextSlot): string {
+  const path = `faces.${props.face}.${slot}.text`
+  const w = ui.warnings.find((x) => x.code === 'missing_glyph' && x.path === path)
+  if (!w) return ''
+  const i = w.msg.indexOf(':')
+  return (i >= 0 ? w.msg.slice(i + 1) : w.msg).trim()
+}
 
 function setText(slot: TextSlot, e: Event): void {
   const value = (e.target as HTMLInputElement).value.slice(0, MAX_TEXT_LENGTH)
@@ -47,6 +58,9 @@ function setNumber(slot: TextSlot, key: 'size' | 'letter_spacing', value: number
           "
           @input="setText(slot, $event)"
         />
+        <span v-if="missingGlyphs(slot)" class="text-xs text-ink" role="alert"
+          >⚑ {{ t('inscription.missingGlyph', { chars: missingGlyphs(slot) }) }}</span
+        >
       </label>
       <RangeField
         :label="t('inscription.letterSize')"

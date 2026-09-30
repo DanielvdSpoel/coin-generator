@@ -1,15 +1,22 @@
 import io
 
+import numpy as np
 import pytest
 from PIL import Image, ImageDraw
-from shapely.geometry import MultiPolygon, Point
+from shapely.geometry import MultiPolygon, Point, Polygon, box
+from shapely.geometry.base import BaseGeometry
+from shapely.ops import unary_union
 
 from src.core.config.models import IconGeometry, IconPlacement
 from src.core.engine.geometry import max_radius, polygons
 from src.core.engine.icons import (
     geometry_from_config,
     geometry_to_config,
+    ink_mask,
+    is_thin_ring,
+    isolate,
     logo_poly,
+    mask_warnings,
     normalise,
     place_icon,
     trace_image,
@@ -110,3 +117,88 @@ def test_logo_poly_assembles_subpaths_even_odd() -> None:
 
 def test_two_part_shape_is_a_multipolygon() -> None:
     assert isinstance(two_squares(), MultiPolygon)
+
+
+# --- isolation ----------------------------------------------------------------------
+
+
+def _ring(outer: float = 100, inner: float = 92) -> Polygon:
+    return Point(0, 0).buffer(outer).difference(Point(0, 0).buffer(inner))
+
+
+def _badge() -> BaseGeometry:
+    """A thin decorative ring around a compact square mark."""
+    return unary_union([_ring(), box(-15, -15, 15, 15)])
+
+
+def test_isolate_drops_the_largest_part_on_request() -> None:
+    kept, codes = isolate(_badge(), drop_largest=True)
+    assert codes == ["largest_dropped"]
+    assert kept.area == pytest.approx(900)
+
+
+def test_isolate_flags_a_badge_when_the_largest_part_dominates() -> None:
+    kept, codes = isolate(_badge(), drop_thin_rings=False)
+    assert codes == ["looks_like_badge"]
+    assert len(list(polygons(kept))) == 2
+
+
+def test_isolate_drops_thin_rings_by_default_but_never_the_only_part() -> None:
+    kept, codes = isolate(_badge())
+    assert "thin_ring_dropped" in codes
+    assert kept.area == pytest.approx(900)
+    assert is_thin_ring(_ring(), _ring().bounds)
+    alone, codes = isolate(_ring())
+    assert codes == [] and alone.area == pytest.approx(_ring().area)
+
+
+def test_isolate_keeps_compact_parts_that_span_the_extent() -> None:
+    disc = Point(0, 0).buffer(100)  # fills 78 % of its bbox: not a ring
+    assert not is_thin_ring(disc, disc.bounds)
+    small_ring = _ring(30, 25)  # a ring, but spanning only 30 % of the extent
+    assert not is_thin_ring(small_ring, disc.bounds)
+
+
+def test_isolate_inner_disc_filters_on_centroid() -> None:
+    shape = unary_union([box(-10, -10, 10, 10), box(70, 70, 90, 90)])
+    kept, codes = isolate(shape, inner_disc=0.5)
+    assert codes == ["outside_inner_disc_dropped"]
+    assert kept.centroid.x == pytest.approx(0) and kept.area == pytest.approx(400)
+
+
+def test_isolate_min_area_drops_tiny_parts() -> None:
+    shape = unary_union([box(-50, -50, 50, 50), box(80, 80, 82, 82)])
+    kept, codes = isolate(shape, min_area=0.01)
+    assert codes == ["tiny_parts_dropped"]
+    assert kept.area == pytest.approx(10000)
+
+
+def test_isolate_fails_when_nothing_survives() -> None:
+    with pytest.raises(IconTraceFailed, match="nothing left"):
+        isolate(box(50, 50, 60, 60), inner_disc=0.1)
+
+
+def test_mask_warnings_report_edges_and_photo_like_masks() -> None:
+    mask = np.zeros((50, 50), dtype=bool)
+    mask[0:5, 10:20] = True
+    assert mask_warnings(mask) == ["touches_edge"]
+    dots = np.zeros((100, 100), dtype=bool)
+    dots[5:95:10, 5:95:10] = True  # 81 isolated pixels
+    assert mask_warnings(dots) == ["photo_like"]
+
+
+def test_white_fills_inside_an_opaque_badge_are_background() -> None:
+    """A rasterised badge SVG is opaque inside its outline; its white fills are paper."""
+    image = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse([5, 5, 195, 195], fill=(0, 0, 0, 255))  # black outline disc
+    draw.ellipse([30, 30, 170, 170], fill=(255, 255, 255, 255))  # white field
+    draw.rectangle([85, 60, 115, 140], fill=(0, 0, 0, 255))  # the mark
+    mask = ink_mask(image)
+    assert not mask[100, 45]  # white field is not ink
+    assert mask[100, 100] and mask[15, 100]  # the mark and the outline are
+
+    # A coloured mark on transparency keeps tracing by alpha alone.
+    mark = Image.new("RGBA", (100, 100), (0, 0, 0, 0))
+    ImageDraw.Draw(mark).ellipse([20, 20, 80, 80], fill=(200, 30, 30, 255))
+    assert ink_mask(mark)[50, 50]

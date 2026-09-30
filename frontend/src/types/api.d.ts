@@ -186,7 +186,7 @@ export interface paths {
         put?: never;
         /**
          * Trace
-         * @description Trace an uploaded PNG or JPEG into icon geometry. Stateless: nothing is stored.
+         * @description Trace an uploaded PNG, JPEG or SVG into icon geometry. Stateless: nothing is stored.
          */
         post: operations["trace_api_icons_trace_post"];
         delete?: never;
@@ -799,6 +799,11 @@ export interface components {
              * @default false
              */
             drop_largest: boolean;
+            /**
+             * Drop Thin Rings
+             * @default true
+             */
+            drop_thin_rings: boolean;
             /** Inner Disc */
             inner_disc?: number | null;
             /**

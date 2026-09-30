@@ -1088,6 +1088,11 @@
             "title": "Drop Largest",
             "type": "boolean"
           },
+          "drop_thin_rings": {
+            "default": true,
+            "title": "Drop Thin Rings",
+            "type": "boolean"
+          },
           "inner_disc": {
             "anyOf": [
               {
@@ -1670,7 +1675,7 @@
     },
     "/api/icons/trace": {
       "post": {
-        "description": "Trace an uploaded PNG or JPEG into icon geometry. Stateless: nothing is stored.",
+        "description": "Trace an uploaded PNG, JPEG or SVG into icon geometry. Stateless: nothing is stored.",
         "operationId": "trace_api_icons_trace_post",
         "requestBody": {
           "content": {

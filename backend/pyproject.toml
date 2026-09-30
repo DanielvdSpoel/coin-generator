@@ -20,6 +20,8 @@ dependencies = [
     "svgpathtools>=1.8.0",
     "scipy>=1.18.1",
     "python-multipart>=0.0.32",
+    "cairosvg>=2.9.1",
+    "defusedxml>=0.7.1",
 ]
 
 [dependency-groups]

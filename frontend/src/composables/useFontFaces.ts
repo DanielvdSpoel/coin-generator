@@ -45,6 +45,8 @@ export function useFontFaces(): void {
       const family = `coin-custom-${sha}`
       if (registered.has(family)) return
       const bytes = Uint8Array.from(atob(custom.data), (c) => c.charCodeAt(0))
+      // The previous custom font's Blob URL is only needed until its FontFace has
+      // loaded; a new one replaces it, so revoke it before minting the next.
       if (customUrl) URL.revokeObjectURL(customUrl)
       customUrl = URL.createObjectURL(new Blob([bytes], { type: 'font/' + custom.format }))
       addFace(family, customUrl)

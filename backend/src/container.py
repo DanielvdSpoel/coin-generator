@@ -9,6 +9,7 @@ with plain Python.
 
 from functools import cached_property, lru_cache
 
+from src.adapters.cairosvg_rasteriser import CairoSvgRasteriser
 from src.adapters.disk_font_registry import DiskFontRegistry
 from src.adapters.filamentcolors_source import FilamentColorsSource, SnapshotFilamentSource
 from src.adapters.fonttools_font_parser import FontToolsFontParser
@@ -20,6 +21,7 @@ from src.core.interfaces.font_parser import FontParser
 from src.core.interfaces.font_registry import FontRegistry
 from src.core.interfaces.mailer import Mailer
 from src.core.interfaces.mesh_cache import MeshCache
+from src.core.interfaces.rasteriser import Rasteriser
 from src.core.services.catalog_service import CatalogService
 from src.core.services.coin_service import BuildExecutor, CoinService
 from src.core.services.contact_service import ContactService, ContactSettings
@@ -83,6 +85,10 @@ class Container:
         return LoggingMailer()
 
     @cached_property
+    def _rasteriser(self) -> Rasteriser:
+        return CairoSvgRasteriser()
+
+    @cached_property
     def _catalog_service(self) -> CatalogService:
         # Cached because it renders template thumbnails once.
         return CatalogService(
@@ -111,6 +117,9 @@ class Container:
     def mailer(self) -> Mailer:
         return self._mailer
 
+    def rasteriser(self) -> Rasteriser:
+        return self._rasteriser
+
     # Per call.
 
     def validation_service(self) -> ValidationService:
@@ -132,7 +141,9 @@ class Container:
         return FontService(self.font_parser())
 
     def icon_service(self) -> IconService:
-        return IconService(self.settings.max_upload_bytes, self.settings.max_icon_vertices)
+        return IconService(
+            self.rasteriser(), self.settings.max_upload_bytes, self.settings.max_icon_vertices
+        )
 
     def contact_service(self) -> ContactService:
         settings = self.settings

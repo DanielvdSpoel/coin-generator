@@ -173,6 +173,7 @@ class TraceOptions(_Model):
     drop_largest: bool = False
     inner_disc: float | None = None
     min_area: float = Field(0, ge=0)
+    drop_thin_rings: bool = True
     invert: bool = False
 
 

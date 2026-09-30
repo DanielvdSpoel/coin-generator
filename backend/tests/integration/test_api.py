@@ -253,9 +253,40 @@ def test_icon_trace_png(api: TestClient) -> None:
     assert api.post("/api/validate", json={"config": config}).status_code == 200
 
 
-def test_icon_trace_rejects_svg_and_garbage(api: TestClient) -> None:
-    svg = api.post("/api/icons/trace", files={"file": ("logo.svg", b"<svg/>", "image/svg+xml")})
-    assert svg.status_code == 422 and "SVG" in svg.json()["detail"][0]["msg"]
+def test_icon_trace_svg(api: TestClient) -> None:
+    svg = (
+        b'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">'
+        b'<path fill-rule="evenodd" d="M100,10 A90,90 0 1,0 100,190 A90,90 0 1,0 100,10 Z '
+        b'M70,70 h60 v60 h-60 Z"/></svg>'
+    )
+    response = api.post(
+        "/api/icons/trace",
+        files={"file": ("logo.svg", svg, "image/svg+xml")},
+        data={"options": json.dumps({"embed_source": True, "drop_thin_rings": False})},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert set(body) == {"geometry", "preview_svg", "parts", "holes", "bbox", "warnings"}
+    assert body["parts"] == 1 and body["holes"] == 1 and body["warnings"] == []
+    assert body["geometry"]["source"]["data_url"].startswith("data:image/svg+xml;base64,")
+    assert body["geometry"]["source"]["trace"]["drop_thin_rings"] is False
+
+    badge = (
+        b'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">'
+        b'<path fill-rule="evenodd" d="M100,10 A90,90 0 1,0 100,190 A90,90 0 1,0 100,10 Z '
+        b'M100,20 A80,80 0 1,0 100,180 A80,80 0 1,0 100,20 Z"/>'
+        b'<rect x="90" y="90" width="20" height="20"/></svg>'
+    )
+    response = api.post("/api/icons/trace", files={"file": ("badge.svg", badge, "image/svg+xml")})
+    assert response.status_code == 200, response.text
+    assert response.json()["warnings"] == ["thin_ring_dropped"]
+
+
+def test_icon_trace_rejects_unsafe_svg_and_garbage(api: TestClient) -> None:
+    unsafe = b'<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9"><script/></svg>'
+    svg = api.post("/api/icons/trace", files={"file": ("logo.svg", unsafe, "image/svg+xml")})
+    assert svg.status_code == 422 and svg.json()["detail"][0]["code"] == "trace_failed"
+    assert "<script>" in svg.json()["detail"][0]["msg"]
     garbage = api.post("/api/icons/trace", files={"file": ("x.png", b"nope", "image/png")})
     assert garbage.status_code == 422
     assert garbage.json()["detail"][0]["code"] == "trace_failed"
