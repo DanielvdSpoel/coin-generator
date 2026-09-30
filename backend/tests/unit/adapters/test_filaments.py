@@ -204,3 +204,14 @@ def test_committed_data_files_load(engine_container) -> None:
     assert registry.resolve(ColorRef(filament="local-bambu-pla-matte-dark-blue")) == "#395064"
     assert registry.resolve(ColorRef(filament="local-bambu-pla-basic-blue")) == "#0a2989"
     assert load_overrides(BACKEND_DIR / "data" / "nope.json") == []
+
+
+def test_version_etag_follows_the_data_and_the_overrides() -> None:
+    source = FakeSource([_swatch("fc-1", "#111111")])
+    plain = MemoryFilamentRegistry(source, [])
+    same = MemoryFilamentRegistry(FakeSource([_swatch("fc-1", "#111111")], version=2), [])
+    changed = MemoryFilamentRegistry(FakeSource([_swatch("fc-1", "#222222")]), [])
+    overridden = MemoryFilamentRegistry(source, [_swatch("fc-1", "#333333")])
+
+    assert plain.version().etag == same.version().etag
+    assert len({plain.version().etag, changed.version().etag, overridden.version().etag}) == 3

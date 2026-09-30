@@ -22,6 +22,7 @@ export const useUiStore = defineStore('ui', () => {
   const validating = ref(false)
   const exporting = ref<string | null>(null)
   const exportError = ref<string | null>(null)
+  const lastDownload = ref<string | null>(null)
   const importErrors = ref<{ loc: (string | number)[]; msg: string }[]>([])
   const importMessage = ref('')
   let toastTimer: ReturnType<typeof setTimeout> | undefined
@@ -62,6 +63,7 @@ export const useUiStore = defineStore('ui', () => {
     validating,
     exporting,
     exportError,
+    lastDownload,
     importErrors,
     importMessage,
     showToast,

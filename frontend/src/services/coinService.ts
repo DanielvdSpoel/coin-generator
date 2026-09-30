@@ -1,5 +1,6 @@
 import type {
   CoinConfig,
+  CoinStats,
   ExportFormat,
   FaceName,
   ValidateResponse,
@@ -9,6 +10,11 @@ import { blobFetcher, jsonFetcher } from '@/services/utils/Fetcher'
 
 export function validateConfig(config: WireCoinConfig): Promise<ValidateResponse> {
   return jsonFetcher<ValidateResponse>('/validate', { method: 'POST', body: { config } })
+}
+
+/** Size, grams per material and filament swap heights, from the cached preview mesh. */
+export function getStats(config: CoinConfig, signal?: AbortSignal): Promise<CoinStats> {
+  return jsonFetcher<CoinStats>('/stats', { method: 'POST', body: { config }, signal })
 }
 
 export function exportCoin(config: CoinConfig, format: ExportFormat): Promise<Blob> {

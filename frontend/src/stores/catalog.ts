@@ -4,11 +4,20 @@
  * Colour resolution falls back to a small built-in table so the preview has
  * sensible colours before the filament list arrives (or when the backend is
  * away): the four measured filaments from the engine's overrides file.
+ *
+ * The filament list (thousands of swatches) is cached in localStorage and only
+ * refetched when `/filaments/version` reports a different etag.
  */
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-import { getFilaments, getFonts, getPresets, getTemplates } from '@/services/catalogService'
+import {
+  getFilaments,
+  getFilamentVersion,
+  getFonts,
+  getPresets,
+  getTemplates,
+} from '@/services/catalogService'
 import type { ColorRef, Filament, FontInfo, Preset, Template } from '@/types/coin'
 
 const FALLBACK_FILAMENTS: Filament[] = [
@@ -50,6 +59,41 @@ const FALLBACK_FILAMENTS: Filament[] = [
   },
 ]
 
+export const FILAMENT_CACHE_KEY = 'coin-designer:filaments:v1'
+
+interface FilamentCache {
+  etag: string
+  filaments: Filament[]
+}
+
+function readFilamentCache(): FilamentCache | null {
+  try {
+    const raw = localStorage.getItem(FILAMENT_CACHE_KEY)
+    const cache = raw ? (JSON.parse(raw) as FilamentCache) : null
+    return cache && typeof cache.etag === 'string' && Array.isArray(cache.filaments) ? cache : null
+  } catch {
+    return null
+  }
+}
+
+function writeFilamentCache(cache: FilamentCache): void {
+  try {
+    localStorage.setItem(FILAMENT_CACHE_KEY, JSON.stringify(cache))
+  } catch {
+    /* storage full or unavailable: the next visit fetches again */
+  }
+}
+
+/** The cached list when its etag is current, else a fresh one (cached for next time). */
+async function loadFilaments(): Promise<Filament[]> {
+  const cache = readFilamentCache()
+  const { etag } = await getFilamentVersion()
+  if (cache && etag && cache.etag === etag) return cache.filaments
+  const filaments = await getFilaments()
+  if (etag) writeFilamentCache({ etag, filaments })
+  return filaments
+}
+
 export interface ResolvedColor {
   hex: string
   label: string
@@ -61,7 +105,7 @@ export interface ResolvedColor {
 
 export const useCatalogStore = defineStore('catalog', () => {
   const fonts = ref<FontInfo[]>([])
-  const filaments = ref<Filament[]>(FALLBACK_FILAMENTS)
+  const filaments = ref<Filament[]>(readFilamentCache()?.filaments ?? FALLBACK_FILAMENTS)
   const presets = ref<Preset[]>([])
   const templates = ref<Template[]>([])
   const loaded = ref(false)
@@ -75,7 +119,7 @@ export const useCatalogStore = defineStore('catalog', () => {
     try {
       const [f, fl, p, t] = await Promise.all([
         getFonts(),
-        getFilaments(),
+        loadFilaments(),
         getPresets(),
         getTemplates(),
       ])

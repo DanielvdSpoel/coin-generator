@@ -50,9 +50,9 @@ lint-backend: ## Backend: ruff check + format check
 	cd backend && $(UV) run ruff check . && $(UV) run ruff format --check .
 
 lint-frontend: ## Frontend: oxlint, eslint, prettier check, type-check
-	$(NPM) exec -- oxlint .
-	$(NPM) exec -- eslint .
-	$(NPM) exec -- prettier --check --experimental-cli src/
+	cd frontend && npx oxlint .
+	cd frontend && npx eslint .
+	cd frontend && npx prettier --check --experimental-cli src/
 	$(NPM) run type-check
 
 format: ## Auto-format both apps

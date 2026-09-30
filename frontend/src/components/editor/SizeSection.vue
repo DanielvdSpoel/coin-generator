@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 
 import DetailsGroup from '@/components/common/DetailsGroup.vue'
 import RangeField from '@/components/common/RangeField.vue'
+import { clampEnamelDepth } from '@/lib/printLimits'
 import { useCoinStore } from '@/stores/coin'
 
 const { t } = useI18n()
@@ -16,7 +17,14 @@ const SIZES: [number, number, number][] = [
 function pick([d, body, relief]: [number, number, number]): void {
   coin.update((draft) => {
     draft.size = { diameter_mm: d, body_mm: body, relief_mm: relief }
+    clampEnamelDepth(draft)
   })
+}
+function setBody(body: number): void {
+  coin.update((draft) => {
+    draft.size.body_mm = body
+    clampEnamelDepth(draft)
+  }, 'size.body_mm')
 }
 </script>
 
@@ -57,7 +65,7 @@ function pick([d, body, relief]: [number, number, number]): void {
       :step="0.1"
       :decimals="1"
       :unit="t('units.mm')"
-      @update:model-value="coin.setField('size.body_mm', $event)"
+      @update:model-value="setBody"
     />
     <RangeField
       :label="t('size.relief')"

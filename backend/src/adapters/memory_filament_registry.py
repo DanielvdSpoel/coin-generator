@@ -6,6 +6,8 @@ colorimeter values from ``coin-tool-addendum.md`` §2; an override wins over an
 upstream swatch with the same id and may also add ``local-…`` entries of its own.
 """
 
+import dataclasses
+import hashlib
 import json
 import logging
 import threading
@@ -49,6 +51,7 @@ class MemoryFilamentRegistry(FilamentRegistry):
         version = source.version()
         merged = {s.id: _filament(s, "measured") for s in swatches}
         merged.update({s.id: _filament(s, "override") for s in self._overrides})
+        version = dataclasses.replace(version, etag=_etag(merged.values()))
         with self._lock:
             self._filaments = merged
             self._version = version
@@ -106,6 +109,12 @@ class MemoryFilamentRegistry(FilamentRegistry):
 
     def stop_background_refresh(self) -> None:
         self._stop.set()
+
+
+def _etag(filaments) -> str:
+    """Short content hash, so clients can cache the list across restarts and deploys."""
+    rows = sorted(json.dumps(dataclasses.astuple(f)) for f in filaments)
+    return hashlib.sha256("\n".join(rows).encode()).hexdigest()[:16]
 
 
 def _filament(swatch: Swatch, hex_source: str) -> Filament:

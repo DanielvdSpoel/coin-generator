@@ -540,6 +540,8 @@ export interface components {
             db_last_modified: number | null;
             /** Db Version */
             db_version: number | null;
+            /** Etag */
+            etag?: string | null;
             /** Refreshed At */
             refreshed_at: string | null;
         };

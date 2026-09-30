@@ -2,11 +2,13 @@
 /**
  * Brand → type → colour, all three visible at once (option 1a of the design
  * round), over the full filamentcolors.xyz catalogue plus our measured entries.
+ * The filaments this browser picked last sit above the columns.
  */
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { readRecentFilaments } from '@/lib/recentFilaments'
 import { useCatalogStore } from '@/stores/catalog'
 import type { ColorRef, Filament } from '@/types/coin'
 
@@ -18,12 +20,14 @@ const catalog = useCatalogStore()
 const q = ref('')
 const brand = ref<string | null>(null)
 const type = ref<string | null>(null)
+const recentIds = ref<string[]>([])
 
 watch(
   () => props.open,
   (open) => {
     if (!open) return
     q.value = ''
+    recentIds.value = readRecentFilaments()
     const cur = props.current.filament
       ? catalog.filamentById.get(props.current.filament)
       : undefined
@@ -75,6 +79,16 @@ const activeType = computed(
 )
 const colours = computed(() => types.value.find((x) => x.name === activeType.value)?.items ?? [])
 const cur = computed(() => catalog.resolve(props.current, '#808080'))
+const recent = computed(() =>
+  q.value
+    ? []
+    : recentIds.value.flatMap((id) => {
+        const f = catalog.filamentById.get(id)
+        return f ? [f] : []
+      }),
+)
+const swatchTitle = (f: Filament) =>
+  `${f.vendor} ${f.finish} ${f.name} · ${f.hex.toUpperCase()}${f.hex_source === 'override' ? ' · ' + t('picker.override') : ''}`
 </script>
 
 <template>
@@ -96,6 +110,24 @@ const cur = computed(() => catalog.resolve(props.current, '#808080'))
         />
         <button type="button" class="link" @click="emit('update:open', false)">
           {{ t('picker.close') }}
+        </button>
+      </div>
+      <div
+        v-if="recent.length"
+        class="flex items-center gap-2.5 overflow-x-auto border-b border-rule px-3 py-2 [scrollbar-width:thin]"
+      >
+        <span class="caps flex-none">{{ t('picker.recent') }}</span>
+        <button
+          v-for="f in recent"
+          :key="f.id"
+          type="button"
+          :title="swatchTitle(f)"
+          class="flex flex-none cursor-pointer items-center gap-1.5 border border-transparent px-1.5 py-1 text-[11px] text-ink hover:border-hair"
+          :class="f.id === current.filament ? 'border-ink!' : ''"
+          @click="emit('pick', f.id)"
+        >
+          <span class="size-4 border border-black/18" :style="{ background: f.hex }" />
+          <span class="whitespace-nowrap">{{ f.vendor }} · {{ f.name }}</span>
         </button>
       </div>
       <div class="grid h-[340px] grid-cols-[150px_190px_minmax(0,1fr)]">
@@ -149,7 +181,7 @@ const cur = computed(() => catalog.resolve(props.current, '#808080'))
               v-for="f in colours"
               :key="f.id"
               type="button"
-              :title="`${f.vendor} ${f.finish} ${f.name} · ${f.hex.toUpperCase()}${f.hex_source === 'override' ? ' · ' + t('picker.override') : ''}`"
+              :title="swatchTitle(f)"
               class="grid cursor-pointer justify-items-center gap-1.5 text-center text-[11px] text-ink"
               @click="emit('pick', f.id)"
             >
@@ -173,6 +205,26 @@ const cur = computed(() => catalog.resolve(props.current, '#808080'))
           />
           <span class="truncate"
             >{{ cur.label }} · {{ cur.sub }} · {{ cur.hex.toUpperCase() }}</span
+          >
+          <span
+            v-if="cur.filament"
+            class="flex-none border border-hair px-1 text-[10px] tracking-wide uppercase"
+            :title="
+              cur.filament.hex_source === 'override'
+                ? t('picker.overrideHint')
+                : t('picker.measuredHint')
+            "
+            >{{
+              cur.filament.hex_source === 'override' ? t('picker.override') : t('picker.measured')
+            }}</span
+          >
+          <a
+            v-if="cur.filament?.source_url"
+            :href="cur.filament.source_url"
+            target="_blank"
+            rel="noopener"
+            class="flex-none"
+            >{{ t('picker.swatch') }}</a
           >
         </span>
         <i18n-t scope="global" keypath="picker.data" tag="span" class="whitespace-nowrap">

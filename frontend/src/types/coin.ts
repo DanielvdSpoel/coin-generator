@@ -36,6 +36,9 @@ export type FaceName = 'front' | 'back'
 export type TextSlot = 'top_text' | 'bottom_text'
 
 export type Filament = Schemas['FilamentDTO']
+export type FilamentVersion = Schemas['FilamentVersionDTO']
+export type CoinStats = Schemas['StatsResponse']
+export type PrintMaterial = Schemas['MaterialStatsDTO']['material']
 export type FontInfo = Schemas['FontDTO']
 export type Preset = Schemas['PresetDTO']
 export type Template = Schemas['TemplateDTO']

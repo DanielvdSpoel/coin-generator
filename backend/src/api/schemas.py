@@ -100,6 +100,7 @@ class FilamentVersionDTO(BaseModel):
     db_version: int | None
     db_last_modified: int | None
     refreshed_at: str | None
+    etag: str | None = None
 
 
 class PresetDTO(BaseModel):

@@ -8,6 +8,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import FilamentPicker from '@/components/dialogs/FilamentPicker.vue'
+import { rememberFilament } from '@/lib/recentFilaments'
 import { useCatalogStore } from '@/stores/catalog'
 import type { ColorRef } from '@/types/coin'
 
@@ -28,6 +29,7 @@ function onHex(e: Event): void {
   emit('update:modelValue', { hex: (e.target as HTMLInputElement).value })
 }
 function pick(id: string): void {
+  rememberFilament(id)
   emit('update:modelValue', { filament: id })
   open.value = false
 }

@@ -61,3 +61,5 @@ class FilamentVersion:
     db_version: int | None
     db_last_modified: int | None
     refreshed_at: str | None = None
+    etag: str | None = None
+    """Hash of the merged list the registry serves; changes with the data or the overrides."""

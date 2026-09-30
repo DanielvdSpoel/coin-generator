@@ -498,6 +498,17 @@
             ],
             "title": "Db Version"
           },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
           "refreshed_at": {
             "anyOf": [
               {

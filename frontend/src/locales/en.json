@@ -22,19 +22,36 @@
     "nothing": "✓ Nothing to fix for a {nozzle} nozzle. Pick a file type below.",
     "keep": "Keep as is",
     "goTo": "Show me",
-    "threeMf": "3MF · two colours",
-    "threeMfDesc": "Metal and enamel as separate parts in one file. Best for multi-material printers.",
+    "threeMf": "3MF · Bambu Studio, OrcaSlicer",
+    "threeMfDesc": "Two colours as named parts, already on filaments 1–3. For AMS and other multi-material printers.",
     "stlPair": "STL pair",
-    "stlPairDesc": "Body and enamel as two files, for any slicer.",
+    "stlPairDesc": "Body and enamel as two STL files, for slicers that do not read 3MF parts.",
     "stl": "STL · one colour",
-    "stlDesc": "Geometry only. Swap filament at a layer for two tones.",
+    "stlDesc": "Geometry only. For two tones on one nozzle, swap filament at the heights above.",
     "failed": "Download failed: {reason}",
     "timeout": "the server took too long. Try again in a moment.",
     "notWatertight": "the coin could not be built as a solid. This is a bug; please report the design.",
     "done": "Downloaded {file}.",
     "copyJson": "Copy the design as JSON",
     "copied": "Design JSON copied to the clipboard.",
-    "copyFailed": "The clipboard is not available here. Use Save file instead."
+    "copyFailed": "The clipboard is not available here. Use Save file instead.",
+    "threeMfPrusa": "3MF · PrusaSlicer",
+    "threeMfPrusaDesc": "The same parts laid out the way PrusaSlicer reads them, on extruders 1–3.",
+    "summary": "Print summary",
+    "size": "{d} mm across · {h} mm thick · about {g} g of PLA",
+    "slot": "Filament {n}",
+    "part": {
+      "body": "metal",
+      "enamel_front": "front enamel",
+      "enamel_back": "back enamel"
+    },
+    "swap": "{z} mm → {name}",
+    "swaps": "One nozzle? Pause and swap filament at the first layer at or above: {list}. The edge shows the colour bands.",
+    "confirm": "{n} problem will likely spoil the print | {n} problems will likely spoil the print",
+    "confirmHint": "They are marked ⚑ above. Fix them, keep them with “Keep as is”, or download anyway.",
+    "anyway": "Download {format} anyway",
+    "cancel": "Back to file types",
+    "last": "Last: {file}"
   },
   "tabs": {
     "front": "Front",
@@ -142,7 +159,11 @@
     "close": "Close",
     "data": "Colour data: {site}",
     "measured": "measured",
-    "override": "our measurement"
+    "override": "our measurement",
+    "recent": "Recent",
+    "swatch": "Swatch ↗",
+    "measuredHint": "Colorimeter reading of a printed sample, from filamentcolors.xyz. This is the colour the preview uses.",
+    "overrideHint": "Our own colorimeter reading. It replaces the filamentcolors.xyz value in the preview."
   },
   "size": {
     "common": "Common sizes",
@@ -167,7 +188,9 @@
   },
   "printer": {
     "nozzle": "Nozzle",
-    "hint": "Used only for the condition checks. Not sure? Leave it at 0.4 mm."
+    "hint": "Used only for the condition checks. Not sure? Leave it at 0.4 mm.",
+    "enamelDepth": "Enamel",
+    "enamelHint": "How deep the enamel colour goes in the two-colour files: {n} layer at {layer} mm. | How deep the enamel colour goes in the two-colour files: {n} layers at {layer} mm. Two layers hide the body colour under most filaments."
   },
   "advanced": {
     "divider": "Inner divider ring",
