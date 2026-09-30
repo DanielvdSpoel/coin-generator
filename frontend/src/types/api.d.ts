@@ -272,6 +272,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stats
+         * @description Size, filament grams per material and the filament swap heights.
+         */
+        post: operations["stats_api_stats_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/templates": {
         parameters: {
             query?: never;
@@ -465,7 +485,7 @@ export interface components {
              * @default stl
              * @enum {string}
              */
-            format: "stl" | "3mf" | "stl-pair";
+            format: "stl" | "3mf" | "3mf-prusa" | "stl-pair";
         };
         /** FaceConfig */
         FaceConfig: {
@@ -501,6 +521,18 @@ export interface components {
             source_url?: string | null;
             /** Vendor */
             vendor: string;
+        };
+        /** FilamentSwapDTO */
+        FilamentSwapDTO: {
+            /** Color */
+            color: string;
+            /**
+             * Material
+             * @enum {string}
+             */
+            material: "body" | "enamel_front" | "enamel_back";
+            /** Z Mm */
+            z_mm: number;
         };
         /** FilamentVersionDTO */
         FilamentVersionDTO: {
@@ -634,6 +666,20 @@ export interface components {
             sha256?: string | null;
             trace?: components["schemas"]["TraceOptions"] | null;
         };
+        /** MaterialStatsDTO */
+        MaterialStatsDTO: {
+            /** Color */
+            color: string;
+            /** Grams */
+            grams: number;
+            /**
+             * Material
+             * @enum {string}
+             */
+            material: "body" | "enamel_front" | "enamel_back";
+            /** Volume Mm3 */
+            volume_mm3: number;
+        };
         /**
          * Meta
          * @description Free-form, excluded from hashing.
@@ -759,6 +805,22 @@ export interface components {
              * @default 0.7
              */
             relief_mm: number;
+        };
+        /**
+         * StatsResponse
+         * @description Print summary. Grams assume PLA (1.24 g/cm³) at 100 % infill.
+         */
+        StatsResponse: {
+            /** Diameter Mm */
+            diameter_mm: number;
+            /** Grams */
+            grams: number;
+            /** Materials */
+            materials: components["schemas"]["MaterialStatsDTO"][];
+            /** Swaps */
+            swaps: components["schemas"]["FilamentSwapDTO"][];
+            /** Thickness Mm */
+            thickness_mm: number;
         };
         /** TemplateDTO */
         TemplateDTO: {
@@ -1355,6 +1417,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    stats_api_stats_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatsResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

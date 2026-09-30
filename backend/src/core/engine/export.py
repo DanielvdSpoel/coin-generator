@@ -1,4 +1,4 @@
-"""Mesh → bytes: STL, GLB, 3MF and the STL pair.
+"""Mesh → bytes: STL, GLB, two 3MF flavours and the STL pair.
 
 Every print format refuses a solid that is not watertight. The 3MF is written by
 hand: trimesh's writer emits no materials, and a small fixed-order XML keeps the
@@ -7,6 +7,7 @@ output deterministic.
 
 import io
 import zipfile
+from dataclasses import dataclass
 from xml.sax.saxutils import quoteattr
 
 import numpy as np
@@ -95,55 +96,124 @@ def _mesh_xml(mesh: trimesh.Trimesh) -> str:
     return f"<mesh><vertices>{vertices}</vertices><triangles>{triangles}</triangles></mesh>"
 
 
-def _print_parts(
-    volumes: PrintVolumes, colors: CoinColors
-) -> list[tuple[str, trimesh.Trimesh, str]]:
-    parts = [("body", volumes.body, colors.relief)]
+@dataclass(frozen=True)
+class PrintPart:
+    """One solid of a print file and the filament slot (1-based) it prints with."""
+
+    name: str
+    mesh: trimesh.Trimesh
+    color: str
+    slot: int
+
+
+def print_parts(volumes: PrintVolumes, colors: CoinColors) -> list[PrintPart]:
+    """``body``, ``enamel_front``, ``enamel_back`` with a filament slot per distinct colour.
+
+    The body is slot 1. Both enamels share slot 2 when they have the same colour,
+    so a coin with one enamel colour needs two filaments, not three.
+    """
+    named = [("body", volumes.body, colors.relief)]
     for face in ("front", "back"):
         if face in volumes.enamel:
-            parts.append((f"enamel_{face}", volumes.enamel[face], colors.inlay(face)))
-    for name, mesh, _ in parts:
+            named.append((f"enamel_{face}", volumes.enamel[face], colors.inlay(face)))
+    slots: dict[str, int] = {}
+    parts = []
+    for name, mesh, color in named:
         _require_watertight(mesh, name)
+        slot = slots.setdefault(color.lower(), len(slots) + 1)
+        parts.append(PrintPart(name, mesh, color, slot))
     return parts
 
 
-def to_3mf(volumes: PrintVolumes, colors: CoinColors, title: str = "coin") -> bytes:
-    """One 3MF with a solid per filament: ``body``, ``enamel_front``, ``enamel_back``.
-
-    The solids are components of a single object, so a slicer imports one coin
-    made of parts and each part can be given its own filament. Colours are written
-    as ``basematerials``; slicers that ignore those still get the named parts.
-    """
-    parts = _print_parts(volumes, colors)
-    materials = "".join(
-        f'<base name={quoteattr(name)} displaycolor="{color.upper()}FF"/>'
-        for name, _, color in parts
-    )
-    objects = "".join(
-        f'<object id="{index + 2}" type="model" name={quoteattr(name)} pid="1" '
-        f'pindex="{index}">{_mesh_xml(mesh)}</object>'
-        for index, (name, mesh, _) in enumerate(parts)
-    )
-    components = "".join(f'<component objectid="{index + 2}"/>' for index in range(len(parts)))
-    assembly_id = len(parts) + 2
-    model = (
+def _model_xml(title: str, resources: str, build_id: int) -> str:
+    return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<model unit="millimeter" xml:lang="en-US" '
         'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
         f'<metadata name="Title">{_escape(title)}</metadata>'
         '<metadata name="Application">coin-designer</metadata>'
-        f'<resources><basematerials id="1">{materials}</basematerials>{objects}'
-        f'<object id="{assembly_id}" type="model" name={quoteattr(title)}>'
-        f"<components>{components}</components></object></resources>"
-        f'<build><item objectid="{assembly_id}"/></build></model>\n'
+        f"<resources>{resources}</resources>"
+        f'<build><item objectid="{build_id}"/></build></model>\n'
     )
+
+
+def _package(model: str, config_name: str, config: str) -> bytes:
     return _zip(
         [
             ("[Content_Types].xml", _CONTENT_TYPES.encode()),
             ("_rels/.rels", _RELS.encode()),
             ("3D/3dmodel.model", model.encode()),
+            (f"Metadata/{config_name}", config.encode()),
         ]
     )
+
+
+def to_3mf(volumes: PrintVolumes, colors: CoinColors, title: str = "coin") -> bytes:
+    """3MF for Bambu Studio and OrcaSlicer: one object whose parts are components.
+
+    ``Metadata/model_settings.config`` names each part and puts it on its filament
+    slot, so the slicer shows a coin of named parts already split over filaments.
+    Colours are also written as ``basematerials`` for other readers. PrusaSlicer
+    loads components as separate objects; it gets ``to_3mf_prusa`` instead.
+    Verified in Bambu Studio 02.08.02.61.
+    """
+    parts = print_parts(volumes, colors)
+    materials = "".join(
+        f'<base name={quoteattr(p.name)} displaycolor="{p.color.upper()}FF"/>' for p in parts
+    )
+    objects = "".join(
+        f'<object id="{index + 2}" type="model" name={quoteattr(p.name)} pid="1" '
+        f'pindex="{index}">{_mesh_xml(p.mesh)}</object>'
+        for index, p in enumerate(parts)
+    )
+    components = "".join(f'<component objectid="{index + 2}"/>' for index in range(len(parts)))
+    assembly_id = len(parts) + 2
+    resources = (
+        f'<basematerials id="1">{materials}</basematerials>{objects}'
+        f'<object id="{assembly_id}" type="model" name={quoteattr(title)}>'
+        f"<components>{components}</components></object>"
+    )
+    settings = "".join(
+        f'<part id="{index + 2}" subtype="normal_part">'
+        f'<metadata key="name" value={quoteattr(p.name)}/>'
+        f'<metadata key="extruder" value="{p.slot}"/></part>'
+        for index, p in enumerate(parts)
+    )
+    config = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<config><object id="{assembly_id}"><metadata key="name" value={quoteattr(title)}/>'
+        f'<metadata key="extruder" value="1"/>{settings}</object></config>\n'
+    )
+    return _package(_model_xml(title, resources, assembly_id), "model_settings.config", config)
+
+
+def to_3mf_prusa(volumes: PrintVolumes, colors: CoinColors, title: str = "coin") -> bytes:
+    """3MF for PrusaSlicer: one mesh holding every solid, split into volumes.
+
+    ``Metadata/Slic3r_PE_model.config`` cuts the mesh into named volumes by
+    triangle range and puts each on its extruder, which is how PrusaSlicer writes
+    multi-part objects itself. Verified in PrusaSlicer 2.8.1.
+    """
+    parts = print_parts(volumes, colors)
+    mesh = trimesh.util.concatenate([p.mesh for p in parts])
+    volume_xml = []
+    first = 0
+    for p in parts:
+        last = first + len(p.mesh.faces) - 1
+        volume_xml.append(
+            f'<volume firstid="{first}" lastid="{last}">'
+            f'<metadata type="volume" key="name" value={quoteattr(p.name)}/>'
+            f'<metadata type="volume" key="extruder" value="{p.slot}"/></volume>'
+        )
+        first = last + 1
+    resources = f'<object id="1" type="model" name={quoteattr(title)}>{_mesh_xml(mesh)}</object>'
+    config = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<config><object id="1" instances_count="1">'
+        f'<metadata type="object" key="name" value={quoteattr(title)}/>'
+        f"{''.join(volume_xml)}</object></config>\n"
+    )
+    return _package(_model_xml(title, resources, 1), "Slic3r_PE_model.config", config)
 
 
 def to_stl_pair(volumes: PrintVolumes) -> bytes:

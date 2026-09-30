@@ -31,6 +31,29 @@ class ExportBody(ConfigBody):
     format: ExportFormat = "stl"
 
 
+class MaterialStatsDTO(BaseModel):
+    material: Literal["body", "enamel_front", "enamel_back"]
+    color: str
+    volume_mm3: float
+    grams: float
+
+
+class FilamentSwapDTO(BaseModel):
+    z_mm: float
+    material: Literal["body", "enamel_front", "enamel_back"]
+    color: str
+
+
+class StatsResponse(BaseModel):
+    """Print summary. Grams assume PLA (1.24 g/cm³) at 100 % infill."""
+
+    diameter_mm: float
+    thickness_mm: float
+    grams: float
+    materials: list[MaterialStatsDTO]
+    swaps: list[FilamentSwapDTO]
+
+
 class WarningDTO(BaseModel):
     code: str
     severity: Literal["info", "warn", "error"]

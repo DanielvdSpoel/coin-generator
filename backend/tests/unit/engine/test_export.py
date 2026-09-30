@@ -1,5 +1,6 @@
 import io
 import zipfile
+from xml.etree import ElementTree
 
 import numpy as np
 import pytest
@@ -87,7 +88,12 @@ def test_3mf_round_trips_as_named_watertight_solids(name: str, built_golden) -> 
 def test_3mf_carries_colours_and_one_build_item(built_default: BuiltCoin) -> None:
     data = export.to_3mf(enamel_volumes(built_default), COLORS, title="Test & <coin>")
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
-        assert archive.namelist() == ["[Content_Types].xml", "_rels/.rels", "3D/3dmodel.model"]
+        assert archive.namelist() == [
+            "[Content_Types].xml",
+            "_rels/.rels",
+            "3D/3dmodel.model",
+            "Metadata/model_settings.config",
+        ]
         model = archive.read("3D/3dmodel.model").decode()
     assert '<base name="body" displaycolor="#DCA256FF"/>' in model
     assert '<base name="enamel_front" displaycolor="#1E4D8CFF"/>' in model
@@ -96,9 +102,71 @@ def test_3mf_carries_colours_and_one_build_item(built_default: BuiltCoin) -> Non
     assert "Test &amp; &lt;coin&gt;" in model
 
 
+def _extruders(config_xml: bytes, tag: str) -> dict[str, str]:
+    """Part name → extruder from a slicer config (Bambu ``part`` or Prusa ``volume``)."""
+    root = ElementTree.fromstring(config_xml)
+    out = {}
+    for part in root.iter(tag):
+        meta = {m.get("key"): m.get("value") for m in part.iter("metadata")}
+        out[meta["name"]] = meta["extruder"]
+    return out
+
+
+def test_3mf_puts_each_part_on_its_filament_for_bambu(built_default: BuiltCoin) -> None:
+    data = export.to_3mf(enamel_volumes(built_default), COLORS)
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        settings = archive.read("Metadata/model_settings.config")
+        model = archive.read("3D/3dmodel.model").decode()
+    root = ElementTree.fromstring(settings)
+    assembly = root.find("object").get("id")
+    assert f'<item objectid="{assembly}"/>' in model
+    part_ids = [p.get("id") for p in root.iter("part")]
+    assert all(f'<object id="{i}" type="model"' in model for i in part_ids)
+    assert _extruders(settings, "part") == {"body": "1", "enamel_front": "2", "enamel_back": "3"}
+
+
+def test_3mf_shares_a_slot_between_equal_enamel_colours(built_default: BuiltCoin) -> None:
+    same = CoinColors(relief="#dca256", front="#1E4D8C", back="#1e4d8c")
+    volumes = enamel_volumes(built_default)
+    assert [(p.name, p.slot) for p in export.print_parts(volumes, same)] == [
+        ("body", 1),
+        ("enamel_front", 2),
+        ("enamel_back", 2),
+    ]
+    with zipfile.ZipFile(io.BytesIO(export.to_3mf_prusa(volumes, same))) as archive:
+        config = archive.read("Metadata/Slic3r_PE_model.config")
+    assert _extruders(config, "volume") == {"body": "1", "enamel_front": "2", "enamel_back": "2"}
+
+
+def test_prusa_3mf_is_one_mesh_cut_into_volumes(built_default: BuiltCoin) -> None:
+    volumes = enamel_volumes(built_default)
+    data = export.to_3mf_prusa(volumes, COLORS, title="Coin")
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        assert archive.namelist()[-1] == "Metadata/Slic3r_PE_model.config"
+        config = ElementTree.fromstring(archive.read("Metadata/Slic3r_PE_model.config"))
+    scene = trimesh.load(io.BytesIO(data), file_type="3mf")
+    (mesh,) = scene.geometry.values()
+
+    ranges = [(int(v.get("firstid")), int(v.get("lastid"))) for v in config.iter("volume")]
+    solids = [volumes.body, volumes.enamel["front"], volumes.enamel["back"]]
+    assert ranges[0][0] == 0 and ranges[-1][1] == len(mesh.faces) - 1
+    for (first, last), solid in zip(ranges, solids, strict=True):
+        part = mesh.submesh([np.arange(first, last + 1)], append=True)
+        assert part.is_watertight
+        assert part.volume == pytest.approx(solid.volume, rel=1e-4)
+    assert _extruders(ElementTree.tostring(config), "volume") == {
+        "body": "1",
+        "enamel_front": "2",
+        "enamel_back": "3",
+    }
+
+
 def test_3mf_and_stl_pair_are_deterministic(built_default: BuiltCoin) -> None:
     volumes = enamel_volumes(built_default)
     assert export.to_3mf(volumes, COLORS) == export.to_3mf(enamel_volumes(built_default), COLORS)
+    assert export.to_3mf_prusa(volumes, COLORS) == export.to_3mf_prusa(
+        enamel_volumes(built_default), COLORS
+    )
     assert export.to_stl_pair(volumes) == export.to_stl_pair(enamel_volumes(built_default))
 
 

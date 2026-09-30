@@ -333,6 +333,7 @@
             "enum": [
               "stl",
               "3mf",
+              "3mf-prusa",
               "stl-pair"
             ],
             "title": "Format",
@@ -443,6 +444,34 @@
           "hex_source"
         ],
         "title": "FilamentDTO",
+        "type": "object"
+      },
+      "FilamentSwapDTO": {
+        "properties": {
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "material": {
+            "enum": [
+              "body",
+              "enamel_front",
+              "enamel_back"
+            ],
+            "title": "Material",
+            "type": "string"
+          },
+          "z_mm": {
+            "title": "Z Mm",
+            "type": "number"
+          }
+        },
+        "required": [
+          "z_mm",
+          "material",
+          "color"
+        ],
+        "title": "FilamentSwapDTO",
         "type": "object"
       },
       "FilamentVersionDTO": {
@@ -823,6 +852,39 @@
         "title": "IconSource",
         "type": "object"
       },
+      "MaterialStatsDTO": {
+        "properties": {
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "grams": {
+            "title": "Grams",
+            "type": "number"
+          },
+          "material": {
+            "enum": [
+              "body",
+              "enamel_front",
+              "enamel_back"
+            ],
+            "title": "Material",
+            "type": "string"
+          },
+          "volume_mm3": {
+            "title": "Volume Mm3",
+            "type": "number"
+          }
+        },
+        "required": [
+          "material",
+          "color",
+          "volume_mm3",
+          "grams"
+        ],
+        "title": "MaterialStatsDTO",
+        "type": "object"
+      },
       "Meta": {
         "additionalProperties": true,
         "description": "Free-form, excluded from hashing.",
@@ -1012,6 +1074,46 @@
           }
         },
         "title": "Size",
+        "type": "object"
+      },
+      "StatsResponse": {
+        "description": "Print summary. Grams assume PLA (1.24 g/cm\u00b3) at 100 % infill.",
+        "properties": {
+          "diameter_mm": {
+            "title": "Diameter Mm",
+            "type": "number"
+          },
+          "grams": {
+            "title": "Grams",
+            "type": "number"
+          },
+          "materials": {
+            "items": {
+              "$ref": "#/components/schemas/MaterialStatsDTO"
+            },
+            "title": "Materials",
+            "type": "array"
+          },
+          "swaps": {
+            "items": {
+              "$ref": "#/components/schemas/FilamentSwapDTO"
+            },
+            "title": "Swaps",
+            "type": "array"
+          },
+          "thickness_mm": {
+            "title": "Thickness Mm",
+            "type": "number"
+          }
+        },
+        "required": [
+          "diameter_mm",
+          "thickness_mm",
+          "grams",
+          "materials",
+          "swaps"
+        ],
+        "title": "StatsResponse",
         "type": "object"
       },
       "TemplateDTO": {
@@ -1864,6 +1966,68 @@
           }
         },
         "summary": "Coin Config Schema",
+        "tags": [
+          "coin"
+        ]
+      }
+    },
+    "/api/stats": {
+      "post": {
+        "description": "Size, filament grams per material and the filament swap heights.",
+        "operationId": "stats_api_stats_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Stats",
         "tags": [
           "coin"
         ]

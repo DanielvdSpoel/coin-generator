@@ -104,6 +104,7 @@ def test_preview_glb_is_fast_when_warm(api: TestClient) -> None:
     [
         ("stl", "model/stl", "stl"),
         ("3mf", "model/3mf", "3mf"),
+        ("3mf-prusa", "model/3mf", "3mf"),
         ("stl-pair", "application/zip", "zip"),
     ],
 )
@@ -119,9 +120,23 @@ def test_export_formats(api: TestClient, fmt: str, media_type: str, extension: s
     elif fmt == "3mf":
         scene = trimesh.load(io.BytesIO(response.content), file_type="3mf")
         assert set(scene.geometry) == {"body", "enamel_front", "enamel_back"}
+    elif fmt == "3mf-prusa":
+        with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+            assert "Metadata/Slic3r_PE_model.config" in archive.namelist()
     else:
         with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
             assert archive.namelist() == ["body.stl", "enamel.stl"]
+
+
+def test_stats(api: TestClient) -> None:
+    response = api.post("/api/stats", json=_body(config_with()))
+    assert response.status_code == 200
+    stats = response.json()
+    assert stats["diameter_mm"] == 50 and stats["thickness_mm"] == pytest.approx(3.9)
+    assert [m["material"] for m in stats["materials"]] == ["body", "enamel_front", "enamel_back"]
+    assert stats["grams"] == pytest.approx(sum(m["grams"] for m in stats["materials"]))
+    assert 5 < stats["grams"] < 10
+    assert [s["z_mm"] for s in stats["swaps"]] == [0.7, 3.2]
 
 
 def test_export_refuses_a_leaky_mesh(api: TestClient, engine_container, monkeypatch) -> None:

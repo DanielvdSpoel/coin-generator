@@ -18,7 +18,8 @@ from src.core.config.models import CoinConfig, FaceName
 from src.core.engine import export
 from src.core.engine.build import BuiltCoin, build_coin
 from src.core.engine.materials import classify_faces, enamel_volumes
-from src.core.engine.quality import EXPORT, Quality, QualityName, quality_for
+from src.core.engine.quality import EXPORT, PREVIEW, Quality, QualityName, quality_for
+from src.core.engine.stats import CoinStats, coin_stats
 from src.core.engine.svg import face_svg
 from src.core.exceptions import BuildTimeout
 from src.core.interfaces.filament_registry import FilamentRegistry
@@ -30,12 +31,13 @@ from src.core.tools.hashing import full_hash, geometry_hash
 
 logger = logging.getLogger(__name__)
 
-ExportFormat = Literal["stl", "3mf", "stl-pair"]
+ExportFormat = Literal["stl", "3mf", "3mf-prusa", "stl-pair"]
 T = TypeVar("T")
 
 _MEDIA_TYPES: dict[ExportFormat, tuple[str, str]] = {
     "stl": ("model/stl", "stl"),
     "3mf": ("model/3mf", "3mf"),
+    "3mf-prusa": ("model/3mf", "3mf"),
     "stl-pair": ("application/zip", "zip"),
 }
 
@@ -155,10 +157,16 @@ class CoinService:
             title = config.meta.name or "coin"
             if fmt == "3mf":
                 data = export.to_3mf(volumes, colors, title)
+            elif fmt == "3mf-prusa":
+                data = export.to_3mf_prusa(volumes, colors, title)
             else:
                 data = export.to_stl_pair(volumes)
         filename = f"{slugify(config.meta.name)}.{extension}"
         return ExportResult(data, filename, media_type, warnings)
+
+    def stats(self, config: CoinConfig) -> CoinStats:
+        """Size, filament per material and swap heights, from the cached preview mesh."""
+        return coin_stats(self.build(config, PREVIEW), resolve_colors(config, self._filaments))
 
     def face_svg(self, config: CoinConfig, face: FaceName, quality: QualityName = "export") -> str:
         glyphs = self._fonts.glyphs(config.font)

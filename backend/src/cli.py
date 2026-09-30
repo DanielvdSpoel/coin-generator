@@ -45,7 +45,9 @@ def _read_config(path: str) -> CoinConfig:
     return load_config(json.loads(Path(path).read_text(encoding="utf-8")))
 
 
-def build_bytes(config: CoinConfig, suffix: str, quality_name: str, container: Container) -> bytes:
+def build_bytes(
+    config: CoinConfig, suffix: str, quality_name: str, container: Container, prusa: bool = False
+) -> bytes:
     glyphs = container.font_registry().glyphs(config.font)
     colors = resolve_colors(config, container.filament_registry())
     built = build_coin(config, glyphs, quality_for(quality_name))
@@ -55,7 +57,8 @@ def build_bytes(config: CoinConfig, suffix: str, quality_name: str, container: C
         return export.to_glb(built.mesh, classify_faces(built), colors)
     volumes = enamel_volumes(built)
     if suffix == ".3mf":
-        return export.to_3mf(volumes, colors, title=config.meta.name or "coin")
+        to_3mf = export.to_3mf_prusa if prusa else export.to_3mf
+        return to_3mf(volumes, colors, title=config.meta.name or "coin")
     return export.to_stl_pair(volumes)
 
 
@@ -67,7 +70,7 @@ def _cmd_build(args: argparse.Namespace, container: Container) -> int:
         return 2
     config = _read_config(args.config)
     started = time.perf_counter()
-    data = build_bytes(config, suffix, args.quality, container)
+    data = build_bytes(config, suffix, args.quality, container, args.prusa)
     out.write_bytes(data)
     elapsed = time.perf_counter() - started
     print(f"wrote {out} ({len(data) / 1024:.0f} kB, {args.quality} quality, {elapsed:.2f} s)")
@@ -142,6 +145,9 @@ def _parser() -> argparse.ArgumentParser:
     build.add_argument("config", help=config_help)
     build.add_argument("out", help="output path: .stl, .glb, .3mf or .zip")
     build.add_argument("--quality", choices=("preview", "export"), default="export")
+    build.add_argument(
+        "--prusa", action="store_true", help="lay a .3mf out for PrusaSlicer (default: Bambu/Orca)"
+    )
     build.set_defaults(run=_cmd_build)
 
     validate = sub.add_parser("validate", help="check a config and list printability warnings")

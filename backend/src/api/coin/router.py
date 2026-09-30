@@ -12,8 +12,11 @@ from src.api.schemas import (
     ConfigBody,
     ErrorResponse,
     ExportBody,
+    FilamentSwapDTO,
+    MaterialStatsDTO,
     PreviewGlbBody,
     PreviewSvgBody,
+    StatsResponse,
     ValidateResponse,
     WarningDTO,
 )
@@ -69,6 +72,19 @@ def preview_glb(body: PreviewGlbBody, request: Request) -> Response:
         content=result.data,
         media_type="model/gltf-binary",
         headers={"ETag": etag, "X-Cache": "hit" if result.cached else "miss"},
+    )
+
+
+@router.post("/stats", response_model=StatsResponse, responses=_ERRORS)
+def stats(body: ConfigBody, request: Request) -> StatsResponse:
+    """Size, filament grams per material and the filament swap heights."""
+    result = get_container_from_request(request).coin_service().stats(body.config)
+    return StatsResponse(
+        diameter_mm=result.diameter_mm,
+        thickness_mm=result.thickness_mm,
+        grams=result.grams,
+        materials=[MaterialStatsDTO(**vars(m)) for m in result.materials],
+        swaps=[FilamentSwapDTO(**vars(s)) for s in result.swaps],
     )
 
 
