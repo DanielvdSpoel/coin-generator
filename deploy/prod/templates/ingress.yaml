@@ -1,13 +1,19 @@
 # One host per environment. Path routing keeps the SPA and API same-origin, so the
 # frontend image is environment-agnostic (VITE_API_URL=/api) and no CORS is needed.
 #
-# TLS: when `ingress.tlsSecretName` is set the Ingress uses that existing Secret
-# (previews share the wildcard certificate from deploy/cluster/) and cert-manager is
-# not involved. Otherwise cert-manager issues a per-release certificate through
-# `ingress.certIssuer` (prod).
+# Two Ingresses for one host: `<release>` routes `/` to the SPA, `<release>-api`
+# routes `/api` to the backend and carries the rate-limit and buffering
+# Middlewares (middlewares.yaml), so static files are never throttled.
+#
+# TLS: when `ingress.tlsSecretName` is set both use that existing Secret (previews
+# share the wildcard certificate from deploy/cluster/) and cert-manager is not
+# involved. Otherwise cert-manager issues one certificate through
+# `ingress.certIssuer`, requested by the web Ingress only; the API Ingress reuses
+# the same Secret, so there is exactly one Certificate per host.
 {{- if not .Values.host }}
 {{- fail "host is required: --set host=<hostname>" }}
 {{- end }}
+{{- $tlsSecret := .Values.ingress.tlsSecretName | default (printf "%s-tls" .Release.Name) }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -25,7 +31,43 @@ spec:
   ingressClassName: {{ .Values.ingress.className }}
   tls:
     - hosts: [{{ .Values.host | quote }}]
-      secretName: {{ .Values.ingress.tlsSecretName | default (printf "%s-tls" .Release.Name) }}
+      secretName: {{ $tlsSecret }}
+  rules:
+    - host: {{ .Values.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "coin.webService" . }}
+                port: { number: 80 }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-api
+  labels:
+    {{- include "coin.labels" . | nindent 4 }}
+  annotations:
+    {{- $mw := list }}
+    {{- if .Values.apiMiddlewares.rateLimit.enabled }}
+    {{- $mw = append $mw (printf "%s-%s-ratelimit@kubernetescrd" .Release.Namespace .Release.Name) }}
+    {{- end }}
+    {{- if .Values.apiMiddlewares.buffering.enabled }}
+    {{- $mw = append $mw (printf "%s-%s-buffering@kubernetescrd" .Release.Namespace .Release.Name) }}
+    {{- end }}
+    {{- if $mw }}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ join "," $mw | quote }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts: [{{ .Values.host | quote }}]
+      secretName: {{ $tlsSecret }}
   rules:
     - host: {{ .Values.host | quote }}
       http:
@@ -35,10 +77,4 @@ spec:
             backend:
               service:
                 name: {{ include "coin.apiService" . }}
-                port: { number: 80 }
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "coin.webService" . }}
                 port: { number: 80 }

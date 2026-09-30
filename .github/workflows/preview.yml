@@ -112,7 +112,7 @@ jobs:
             --wait --timeout 6m
       - name: Wait for HTTPS
         run: |
-          for i in $(seq 1 40); do
+          for _ in $(seq 1 40); do
             if curl -fsS --max-time 10 "https://$HOST/api/health" >/dev/null 2>&1; then echo "up"; exit 0; fi
             sleep 15
           done

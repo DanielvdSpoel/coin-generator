@@ -1,0 +1,36 @@
+# Extra rights for the CI deployer in the prod namespace.
+#
+# The built-in `admin` ClusterRole (bound by generate-ci-kubeconfig.sh) does not
+# cover CRDs, so helm could not create the prod chart's Traefik Middlewares,
+# ServiceMonitor and PrometheusRule. Applied once by a cluster admin:
+#
+#   kubectl apply -f deploy/cluster/deployer-crd-rbac.yml
+#
+# Previews keep these templates off (deploy/preview/values.yaml) and need nothing.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-deployer-crds
+  namespace: coin-generator
+rules:
+  - apiGroups: [traefik.io]
+    resources: [middlewares]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [monitoring.coreos.com]
+    resources: [servicemonitors, prometheusrules]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-deployer-crds
+  namespace: coin-generator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: github-deployer-crds
+subjects:
+  - kind: ServiceAccount
+    name: github-deployer
+    namespace: coin-generator

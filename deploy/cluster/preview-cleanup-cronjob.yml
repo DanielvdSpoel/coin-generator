@@ -1,0 +1,77 @@
+# Nightly safety net for PR previews: uninstall every release in
+# coin-generator-preview that has not been deployed for 14 days. preview.yml
+# already tears a release down when its PR closes; this catches the missed
+# `closed` events. An open PR that goes quiet loses its preview too, and gets
+# it back on the next push. Applied once by a cluster admin:
+#
+#   kubectl apply -f deploy/cluster/preview-cleanup-cronjob.yml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: preview-janitor
+  namespace: coin-generator-preview
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: preview-janitor-admin
+  namespace: coin-generator-preview
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+subjects:
+  - kind: ServiceAccount
+    name: preview-janitor
+    namespace: coin-generator-preview
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: preview-janitor
+  namespace: coin-generator-preview
+spec:
+  schedule: "17 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      template:
+        spec:
+          serviceAccountName: preview-janitor
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: janitor
+              # helm, kubectl and jq in one image.
+              image: alpine/k8s:1.33.4
+              env:
+                - { name: MAX_AGE_DAYS, value: "14" }
+                - { name: HOME, value: /tmp }
+              command: [/bin/sh, -ec]
+              args:
+                - |
+                  cutoff=$(( $(date +%s) - MAX_AGE_DAYS * 86400 ))
+                  helm list -n coin-generator-preview -o json |
+                    jq -r --argjson cutoff "$cutoff" '.[]
+                      | select((.updated | sub("\\.[0-9]+"; "") | sub(" [+-][0-9]{4} [A-Z]+$"; "")
+                          | strptime("%Y-%m-%d %H:%M:%S") | mktime) < $cutoff)
+                      | .name' |
+                    while read -r release; do
+                      echo "uninstalling stale preview $release"
+                      helm uninstall "$release" -n coin-generator-preview --wait --timeout 3m
+                    done
+                  echo "done"
+              resources:
+                requests: { cpu: 10m, memory: 64Mi }
+                limits: { cpu: 200m, memory: 256Mi }
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities: { drop: [ALL] }

@@ -1,0 +1,59 @@
+# Alerts for the API. Routed by the cluster's Alertmanager like every other rule.
+# Needs deploy/cluster/deployer-crd-rbac.yml.
+{{- if .Values.monitoring.prometheusRule }}
+{{- $ns := .Release.Namespace }}
+{{- $api := include "coin.apiService" . }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ $api }}
+  labels:
+    {{- include "coin.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: {{ .Release.Name }}.rules
+      rules:
+        - alert: CoinPreviewSlow
+          expr: |
+            histogram_quantile(0.95, sum by (le) (rate(
+              http_request_duration_seconds_bucket{namespace="{{ $ns }}", handler="/api/preview/glb"}[10m]
+            ))) > 2
+          for: 10m
+          labels: { severity: warning }
+          annotations:
+            summary: "Coin Designer: p95 3D preview latency above 2 s"
+            description: "p95 of POST /api/preview/glb is {{`{{ $value | humanizeDuration }}`}} over 10 minutes."
+        - alert: CoinApiErrors
+          expr: |
+            sum(rate(http_requests_total{namespace="{{ $ns }}", status="5xx"}[5m]))
+              / sum(rate(http_requests_total{namespace="{{ $ns }}"}[5m])) > 0.02
+          for: 10m
+          labels: { severity: warning }
+          annotations:
+            summary: "Coin Designer: more than 2 % of API requests fail"
+            description: "5xx ratio is {{`{{ $value | humanizePercentage }}`}}."
+        - alert: CoinBuildTimeouts
+          expr: increase(coin_build_timeouts_total{namespace="{{ $ns }}"}[15m]) > 3
+          labels: { severity: warning }
+          annotations:
+            summary: "Coin Designer: builds are timing out"
+            description: "{{`{{ $value }}`}} builds hit the timeout in 15 minutes; the pods are saturated."
+        - alert: CoinApiReplicasLow
+          expr: |
+            kube_deployment_status_replicas_available{namespace="{{ $ns }}", deployment="{{ $api }}"}
+              < {{ .Values.monitoring.minApiReplicas }}
+          for: 5m
+          labels: { severity: critical }
+          annotations:
+            summary: "Coin Designer: fewer than {{ .Values.monitoring.minApiReplicas }} API pods available"
+        {{- if .Values.backend.hpa.enabled }}
+        - alert: CoinApiAtMaxReplicas
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas{namespace="{{ $ns }}", horizontalpodautoscaler="{{ $api }}"}
+              >= kube_horizontalpodautoscaler_spec_max_replicas{namespace="{{ $ns }}", horizontalpodautoscaler="{{ $api }}"}
+          for: 30m
+          labels: { severity: warning }
+          annotations:
+            summary: "Coin Designer: API autoscaler has been at its maximum for 30 minutes"
+        {{- end }}
+{{- end }}

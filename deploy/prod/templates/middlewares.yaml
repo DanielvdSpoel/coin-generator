@@ -1,0 +1,41 @@
+# Traefik Middlewares on the API Ingress (ingress.yaml). Needs the deployer Role
+# from deploy/cluster/deployer-crd-rbac.yml.
+#
+# rateLimit counts per visitor. Behind Cloudflare the TCP peer is a Cloudflare
+# edge, so the source is taken from X-Forwarded-For, skipping Cloudflare's own
+# ranges (the same list Traefik trusts for forwarded headers in the cluster repo).
+{{- with .Values.apiMiddlewares.rateLimit }}
+{{- if .enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $.Release.Name }}-ratelimit
+  labels:
+    {{- include "coin.labels" $ | nindent 4 }}
+spec:
+  rateLimit:
+    average: {{ .average }}
+    burst: {{ .burst }}
+    period: {{ .period | default "1s" }}
+    sourceCriterion:
+      ipStrategy:
+        excludedIPs:
+          {{- toYaml .trustedProxies | nindent 10 }}
+{{- end }}
+{{- end }}
+{{- with .Values.apiMiddlewares.buffering }}
+{{- if .enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $.Release.Name }}-buffering
+  labels:
+    {{- include "coin.labels" $ | nindent 4 }}
+spec:
+  buffering:
+    # Uploads are capped at 10 MB (decision D14); the backend checks again.
+    maxRequestBodyBytes: {{ int64 .maxRequestBodyBytes }}
+    memRequestBodyBytes: 2097152
+{{- end }}
+{{- end }}

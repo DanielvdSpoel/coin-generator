@@ -4,8 +4,11 @@
 # CI deploys on push to main:
 #   helm upgrade --install coin-generator deploy/prod -n coin-generator \
 #     --set backend.image.tag=sha-<sha> --set frontend.image.tag=sha-<sha>
-# Same structure as deploy/preview; only numbers differ. Phase 8 adds the
-# ServiceMonitor, rate-limit Middleware and NetworkPolicy templates here.
+# Same structure as deploy/preview; only numbers differ.
+#
+# Middlewares, ServiceMonitor and PrometheusRule are Traefik / Prometheus
+# Operator CRDs: the CI deployer may only create them once
+# deploy/cluster/deployer-crd-rbac.yml is applied (see deploy/README.md).
 # =============================================================================
 
 host: coins.danielvdspoel.com
@@ -17,6 +20,54 @@ ingress:
   tlsSecretName: ""
   certIssuer: letsencrypt-dns01
   annotations: {}
+
+# Traefik Middlewares on the /api Ingress (templates/middlewares.yaml).
+apiMiddlewares:
+  rateLimit:
+    enabled: true
+    # Per visitor: 10 requests/s sustained, bursts of 20. Slider drags are
+    # debounced client-side, so a real user stays far below this.
+    average: 10
+    burst: 20
+    period: 1s
+    # Skipped when picking the visitor out of X-Forwarded-For: Cloudflare's
+    # edges. Keep in sync with the cluster repo (infrastructure/traefik/values.yml).
+    trustedProxies: &cloudflare
+      - 173.245.48.0/20
+      - 103.21.244.0/22
+      - 103.22.200.0/22
+      - 103.31.4.0/22
+      - 141.101.64.0/18
+      - 108.162.192.0/18
+      - 190.93.240.0/20
+      - 188.114.96.0/20
+      - 197.234.240.0/22
+      - 198.41.128.0/17
+      - 162.158.0.0/15
+      - 104.16.0.0/13
+      - 104.24.0.0/14
+      - 172.64.0.0/13
+      - 131.0.72.0/22
+      - 2400:cb00::/32
+      - 2606:4700::/32
+      - 2803:f800::/32
+      - 2405:b500::/32
+      - 2405:8100::/32
+      - 2a06:98c0::/29
+      - 2c0f:f248::/32
+  buffering:
+    enabled: true
+    maxRequestBodyBytes: 10485760 # 10 MB, decision D14
+
+# Pods accept traffic only from these namespaces (templates/networkpolicy.yaml).
+networkPolicy:
+  enabled: true
+  fromNamespaces: [traefik, monitoring]
+
+monitoring:
+  serviceMonitor: true
+  prometheusRule: true
+  minApiReplicas: 2
 
 backend:
   nameOverride: api
@@ -30,6 +81,24 @@ backend:
     ENVIRONMENT: prod
     BUILD_WORKERS: "2"
     CORS_ORIGINS: ""
+    # Skipped when reading the visitor from X-Forwarded-For (per-client build caps,
+    # contact rate limit): the cluster's private ranges and Cloudflare's edges.
+    # Keep in sync with apiMiddlewares.rateLimit.trustedProxies above.
+    TRUSTED_PROXIES: '["127.0.0.0/8","10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","::1/128","fc00::/7","173.245.48.0/20","103.21.244.0/22","103.22.200.0/22","103.31.4.0/22","141.101.64.0/18","108.162.192.0/18","190.93.240.0/20","188.114.96.0/20","197.234.240.0/22","198.41.128.0/17","162.158.0.0/15","104.16.0.0/13","104.24.0.0/14","172.64.0.0/13","131.0.72.0/22","2400:cb00::/32","2606:4700::/32","2803:f800::/32","2405:b500::/32","2405:8100::/32","2a06:98c0::/29","2c0f:f248::/32"]'
+  # SMTP for "request a print" (D19) from the SealedSecret coin-generator-smtp
+  # (deploy/cluster/README: how to seal it). optional: without the Secret the
+  # app logs the mail instead of sending it, so a deploy never fails on it.
+  extraEnv:
+    - name: SMTP_HOST
+      valueFrom: { secretKeyRef: { name: coin-generator-smtp, key: SMTP_HOST, optional: true } }
+    - name: SMTP_PORT
+      valueFrom: { secretKeyRef: { name: coin-generator-smtp, key: SMTP_PORT, optional: true } }
+    - name: SMTP_USER
+      valueFrom: { secretKeyRef: { name: coin-generator-smtp, key: SMTP_USER, optional: true } }
+    - name: SMTP_PASSWORD
+      valueFrom: { secretKeyRef: { name: coin-generator-smtp, key: SMTP_PASSWORD, optional: true } }
+    - name: SMTP_FROM
+      valueFrom: { secretKeyRef: { name: coin-generator-smtp, key: SMTP_FROM, optional: true } }
   livenessProbe:
     httpGet: { path: /api/healthz, port: http }
     initialDelaySeconds: 5

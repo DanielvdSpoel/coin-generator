@@ -1,0 +1,19 @@
+# Prometheus scrapes the API's /metrics (kube-prometheus-stack picks up every
+# ServiceMonitor; see the cluster repo). Needs deploy/cluster/deployer-crd-rbac.yml.
+{{- if .Values.monitoring.serviceMonitor }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "coin.apiService" . }}
+  labels:
+    {{- include "coin.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.backend.nameOverride }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+{{- end }}

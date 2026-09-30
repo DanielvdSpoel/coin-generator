@@ -1,0 +1,144 @@
+"""Writes coin-generator-dashboard.yml: the Grafana dashboard as a ConfigMap.
+
+Run `python3 deploy/grafana/build_dashboard.py` after editing the panels below;
+the generated YAML is what gets applied (see the header it writes).
+"""
+
+import json
+from pathlib import Path
+
+PROM = {"type": "prometheus", "uid": "prometheus"}
+LOKI = {"type": "loki", "uid": "loki"}
+NS = 'namespace="$namespace"'
+
+
+def ts(title, targets, unit="short", x=0, y=0, w=12, h=8, stack=False, max_=None):
+    panel = {
+        "type": "timeseries",
+        "title": title,
+        "datasource": PROM,
+        "gridPos": {"x": x, "y": y, "w": w, "h": h},
+        "fieldConfig": {
+            "defaults": {
+                "unit": unit,
+                "custom": {"fillOpacity": 10, "stacking": {"mode": "normal" if stack else "none"}},
+            },
+            "overrides": [],
+        },
+        "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+        "targets": [
+            {"refId": chr(65 + i), "expr": expr, "legendFormat": legend, "datasource": PROM}
+            for i, (expr, legend) in enumerate(targets)
+        ],
+    }
+    if max_ is not None:
+        panel["fieldConfig"]["defaults"]["max"] = max_
+    return panel
+
+
+def row(title, y):
+    return {"type": "row", "title": title, "gridPos": {"x": 0, "y": y, "w": 24, "h": 1}, "collapsed": False}
+
+
+def q(quantile, metric, by, extra=""):
+    return f"histogram_quantile({quantile}, sum by (le, {by}) (rate({metric}_bucket{{{NS}{extra}}}[5m])))"
+
+
+panels = [
+    row("Traffic", 0),
+    ts("Requests / s by endpoint", [
+        (f'sum by (handler) (rate(http_requests_total{{{NS}}}[5m]))', "{{handler}}"),
+    ], "reqps", 0, 1, stack=True),
+    ts("5xx ratio", [
+        (f'sum(rate(http_requests_total{{{NS}, status="5xx"}}[5m])) / sum(rate(http_requests_total{{{NS}}}[5m]))', "5xx"),
+        (f'sum(rate(http_requests_total{{{NS}, status="4xx"}}[5m])) / sum(rate(http_requests_total{{{NS}}}[5m]))', "4xx"),
+    ], "percentunit", 12, 1),
+    ts("p95 latency by endpoint", [
+        (q(0.95, "http_request_duration_seconds", "handler", ', handler=~"/api/(preview/glb|export|stats|validate|icons/trace)"'), "{{handler}}"),
+    ], "s", 0, 9, w=24),
+    row("Builds", 17),
+    ts("Build time (p50 / p95) by quality", [
+        (q(0.5, "coin_build_seconds", "quality"), "p50 {{quality}}"),
+        (q(0.95, "coin_build_seconds", "quality"), "p95 {{quality}}"),
+    ], "s", 0, 18),
+    ts("Builds in flight per pod", [
+        (f"coin_builds_in_flight{{{NS}}}", "{{pod}}"),
+    ], "short", 12, 18),
+    ts("Cache hit ratio", [
+        (f'sum by (kind) (rate(coin_cache_lookups_total{{{NS}, result="hit"}}[15m])) / sum by (kind) (rate(coin_cache_lookups_total{{{NS}}}[15m]))', "{{kind}}"),
+    ], "percentunit", 0, 26, max_=1),
+    ts("Timeouts and per-client refusals (per 5 min)", [
+        (f"sum(increase(coin_build_timeouts_total{{{NS}}}[5m]))", "build timeouts"),
+        (f"sum by (kind) (increase(coin_client_limited_total{{{NS}}}[5m]))", "refused: {{kind}}"),
+    ], "short", 12, 26),
+    ts("Icon trace time (p50 / p95)", [
+        (q(0.5, "coin_icon_trace_seconds", "namespace"), "p50"),
+        (q(0.95, "coin_icon_trace_seconds", "namespace"), "p95"),
+    ], "s", 0, 34, w=24),
+    row("Pods", 42),
+    ts("CPU by pod", [
+        (f'sum by (pod) (rate(container_cpu_usage_seconds_total{{{NS}, container!="", pod=~".*-api-.*"}}[5m]))', "{{pod}}"),
+    ], "cores", 0, 43),
+    ts("Memory by pod", [
+        (f'sum by (pod) (container_memory_working_set_bytes{{{NS}, container!="", pod=~".*-api-.*"}})', "{{pod}}"),
+    ], "bytes", 12, 43),
+    row("Logs", 51),
+    {
+        "type": "logs",
+        "title": "API access log (filter by config hash)",
+        "datasource": LOKI,
+        "gridPos": {"x": 0, "y": 52, "w": 24, "h": 12},
+        "options": {"showTime": True, "wrapLogMessage": True, "sortOrder": "Descending"},
+        "targets": [{
+            "refId": "A",
+            "datasource": LOKI,
+            "expr": '{namespace="$namespace", pod=~".*-api-.*"} | json | logger="coin.access" | config_hash=~"$config_hash.*"',
+        }],
+    },
+]
+
+dashboard = {
+    "uid": "coin-generator",
+    "title": "Coin Designer",
+    "tags": ["coin-generator"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "refresh": "30s",
+    "time": {"from": "now-6h", "to": "now"},
+    "templating": {"list": [
+        {
+            "name": "namespace", "label": "Namespace", "type": "custom",
+            "query": "coin-generator,coin-generator-preview",
+            "current": {"text": "coin-generator", "value": "coin-generator"},
+            "options": [],
+        },
+        {
+            "name": "config_hash", "label": "Config hash (prefix)", "type": "textbox",
+            "query": "", "current": {"text": "", "value": ""},
+        },
+    ]},
+    "panels": panels,
+}
+
+header = """\
+# Coin Designer Grafana dashboard. GENERATED by build_dashboard.py: edit that.
+#
+# The kube-prometheus-stack Grafana sidecar mounts ConfigMaps in `monitoring`
+# labelled grafana_dashboard: "1" (see the cluster repo). Applied by an admin:
+#
+#   kubectl apply --server-side -f deploy/grafana/coin-generator-dashboard.yml
+"""
+config_map = {
+    "apiVersion": "v1",
+    "kind": "ConfigMap",
+    "metadata": {
+        "name": "coin-generator-dashboard",
+        "namespace": "monitoring",
+        "labels": {"grafana_dashboard": "1"},
+        "annotations": {"grafana_folder": "Apps"},
+    },
+}
+body = json.dumps(dashboard, indent=2)
+yaml = header + json.dumps(config_map, indent=2)[:-2] + ',\n  "data": {"coin-generator.json": ' + json.dumps(body) + "}\n}\n"
+Path(__file__).with_name("coin-generator-dashboard.yml").write_text(yaml)
+print("wrote coin-generator-dashboard.yml")

@@ -29,56 +29,56 @@ are available on top of what is listed here.
 ## Tasks
 
 ### 8.1 Images
-- [ ] Backend: confirm `readOnlyRootFilesystem: true` works with `MPLCONFIGDIR` and
+- [x] Backend: confirm `readOnlyRootFilesystem: true` works with `MPLCONFIGDIR` and
       `/tmp` on emptyDir; `HEALTHCHECK`; record image size.
-- [ ] Frontend: brotli in nginx if the unprivileged image supports it, else gzip
+- [x] Frontend: brotli in nginx if the unprivileged image supports it, else gzip
       only; `client_max_body_size` irrelevant (no proxy in nginx).
-- [ ] Trivy scan step in `ci.yml`; fail on critical CVEs.
+- [x] Trivy scan step in `ci.yml`; fail on critical CVEs.
 
 ### 8.2 Prod chart (`deploy/prod`)
 - [ ] Backend values: `hpa` 2–6 at 60 % CPU (after metrics-server), requests 500m/512Mi, limits 2 CPU/1Gi,
       `env.BUILD_WORKERS: "2"`, `terminationGracePeriodSeconds` > build timeout
       (the chart's `preStop` sleep handles Traefik deregistration).
-- [ ] Frontend values: 2 replicas, PDB on (chart creates it automatically when
+- [x] Frontend values: 2 replicas, PDB on (chart creates it automatically when
       replicas > 1).
-- [ ] `templates/servicemonitor.yaml` for the backend `/metrics` (or add a
+- [x] `templates/servicemonitor.yaml` for the backend `/metrics` (or add a
       `serviceMonitor` knob to `web-service` and bump it; preferred, since the ML
       service will want it too).
-- [ ] `templates/middleware-ratelimit.yaml`: Traefik `Middleware` with `rateLimit`
+- [x] `templates/middleware-ratelimit.yaml`: Traefik `Middleware` with `rateLimit`
       (average 10 rps, burst 20 per source IP) applied to the `/api` router via
       the Ingress annotation
       `traefik.ingress.kubernetes.io/router.middlewares`. Second `Middleware`
       `buffering` with `maxRequestBodyBytes: 10485760` (10 MB, D14).
-- [ ] `templates/networkpolicy.yaml`: backend ingress only from the Traefik
+- [x] `templates/networkpolicy.yaml`: backend ingress only from the Traefik
       namespace; egress limited to DNS, the SMTP host (D19) and filamentcolors.xyz
       (D5).
 - [ ] SMTP credentials as a SealedSecret `coin-generator-smtp` in the prod
       namespace (and a logging mailer in previews, `MAILER=log`), referenced via
       the chart's `envFromSecret`.
-- [ ] Ingress: prod host only, `www` not needed. Keep the preview umbrella
+- [x] Ingress: prod host only, `www` not needed. Keep the preview umbrella
       identical except values, so drift between environments is only numbers.
 
 ### 8.3 Workflows
-- [ ] `ci.yml`: add Trivy, `kubeconform` on rendered charts, E2E on compose
+- [x] `ci.yml`: add Trivy, `kubeconform` on rendered charts, E2E on compose
       (phase 7) as a required check.
-- [ ] `prod.yml`: `environment: production` with a required reviewer if you want a
+- [x] `prod.yml`: `environment: production` with a required reviewer if you want a
       manual gate; automatic `helm rollback coin-generator 0` when the post-deploy
       smoke test fails; post a summary to the job.
-- [ ] `release.yml`: tag `vX.Y.Z` → GitHub Release with generated notes; the
+- [x] `release.yml`: tag `vX.Y.Z` → GitHub Release with generated notes; the
       frontend image gets `version.txt` from the tag or short SHA.
 - [ ] Preview cleanup CronJob (in the preview namespace, from the cluster repo):
       delete releases older than 14 days whose PR is closed, in case the
       `closed` event was missed.
 
 ### 8.4 Observability
-- [ ] `prometheus-fastapi-instrumentator` on the backend plus custom metrics:
+- [x] `prometheus-fastapi-instrumentator` on the backend plus custom metrics:
       build duration histogram by quality, cache hit ratio, build queue depth,
       timeouts, icon trace duration.
-- [ ] JSON logs to stdout (Alloy → Loki already tails every pod); fields: request
+- [x] JSON logs to stdout (Alloy → Loki already tails every pod); fields: request
       id, path, status, duration, config hash, cache hit.
 - [ ] Grafana dashboard JSON committed under `deploy/grafana/` and applied via the
       cluster repo's dashboard ConfigMap pattern (see `monitoring/unraid/dashboards.yml`).
-- [ ] `PrometheusRule`: p95 preview build > 2 s for 10 min, 5xx ratio > 2 %,
+- [x] `PrometheusRule`: p95 preview build > 2 s for 10 min, 5xx ratio > 2 %,
       backend available replicas < 2, HPA at max for 30 min.
 - [ ] Uptime Kuma monitor on `https://coins.danielvdspoel.com/api/health` via the
       existing autokuma ConfigMap.
@@ -86,14 +86,14 @@ are available on top of what is listed here.
       self-hosted, already running).
 
 ### 8.5 Abuse control (public, D17)
-- [ ] Traefik rate limit (above) plus a backend per-IP concurrent build cap
+- [x] Traefik rate limit (above) plus a backend per-IP concurrent build cap
       (1 in-flight export, 2 in-flight previews) keyed on `X-Forwarded-For`.
-- [ ] `max_upload_bytes` 10 MB, `max_icon_vertices` 50 000, `build_timeout_s` 20,
+- [x] `max_upload_bytes` 10 MB, `max_icon_vertices` 50 000, `build_timeout_s` 20,
       JSON body limit 2 MB.
-- [ ] Privacy note in the UI footer: designs are never stored on the server.
+- [x] Privacy note in the UI footer: designs are never stored on the server.
 
 ### 8.6 Runbook (`deploy/README.md`)
-- [ ] How previews work, how to regenerate a CI kubeconfig, how to roll back
+- [x] How previews work, how to regenerate a CI kubeconfig, how to roll back
       prod (`helm history` / `helm rollback`), how to bump the `web-service` chart
       version, where DNS lives, what to do when a certificate does not issue.
 
@@ -126,3 +126,59 @@ are available on top of what is listed here.
 - Previews and prod share nodes; the preview `ResourceQuota` is the guard.
 - `BUILD_WORKERS` × pod CPU limit must stay honest: each build is single-threaded
   Python plus manifold's own threads. Measure before raising.
+
+## Outcome (2026-10-01)
+
+Done in the repo (branch `phase-8-deploy`). Cluster-side steps are listed at
+the end.
+
+- **Images:** backend 173 MB (read-only root, `/tmp` emptyDir, `HEALTHCHECK`,
+  `MALLOC_ARENA_MAX=2`). Frontend 22 MB on `nginx-unprivileged:1.30-alpine`;
+  the old 1.27 base had 2 critical and 40 high CVEs, the new one has none
+  fixable. gzip only (no brotli module; Cloudflare compresses anyway).
+  Trivy runs in CI and fails on fixable CRITICALs.
+- **Chart** (prod and preview share templates): `/api` gets its own Ingress
+  carrying the Traefik `rateLimit` (10/s, burst 20, visitor found by skipping
+  Cloudflare ranges in XFF) and `buffering` (10 MB) Middlewares. NetworkPolicy
+  limits ingress to Traefik (+ monitoring for the API). There are templates
+  for ServiceMonitor and PrometheusRule (p95 GLB > 2 s, 5xx > 2 %, build
+  timeouts, API replicas < 2, HPA at max when enabled). SMTP comes from
+  optional `secretKeyRef`s, so a missing Secret never blocks a deploy.
+  Previews keep the CRD extras off. Requests stay at 250m/384Mi and there is
+  no HPA while the cluster lacks metrics-server and CPU headroom.
+- **Differs from plan:** a ServiceMonitor template in the umbrella chart
+  instead of a `serviceMonitor` knob in `web-service` (that needs a release of
+  the shared chart). There is no `MAILER` setting: without `SMTP_HOST` the
+  logging mailer is used. Preview cleanup deletes releases not deployed for
+  14 days, whatever their PR's state, so it needs no GitHub token. The
+  per-client preview cap is 3, not 2: the browser abandons superseded GLB
+  requests, but the server finishes them.
+- **Observability:** `/metrics` (HTTP + build seconds by quality, timeouts,
+  builds in flight, mesh/GLB cache hits, trace seconds, per-client refusals).
+  Access logs carry `config_hash` and `cache`. Grafana dashboard generated
+  into `deploy/grafana/`.
+- **Abuse control:** per-client caps (1 export, 3 previews, 429). The client
+  IP is read right-to-left through `TRUSTED_PROXIES`, because Cloudflare
+  appends to a client-supplied `X-Forwarded-For` and the leftmost entry can
+  be forged.
+- **CI:** kubeconform on both rendered charts and the cluster manifests
+  (CRDs from the datreeio catalogue), Trivy per image, Playwright E2E. prod
+  smoke test also checks the SPA and one real build; job summary with Helm
+  history. actionlint is clean.
+- **Load test** (`deploy/loadtest/`), one pod-sized container, 20 visitors:
+  p95 77 ms, 0 failures, 339 MiB. The first run found two real bugs, both
+  fixed: 500s from an earcut triangulation that was not a volume, and a mesh
+  cache using ~14× its estimate (would have OOM-killed a full pod).
+
+**Waiting on a cluster admin / other repos** (not done from here):
+
+1. `kubectl apply -f deploy/cluster/deployer-crd-rbac.yml` *before* this
+   branch's first prod deploy, else helm cannot create the Middlewares,
+   ServiceMonitor and PrometheusRule and the deploy fails (prod keeps running
+   the previous revision).
+2. `kubectl apply -f deploy/cluster/preview-cleanup-cronjob.yml`.
+3. `kubectl apply --server-side -f deploy/grafana/coin-generator-dashboard.yml`.
+4. The autokuma entry in the cluster repo (snippet in `deploy/README.md`).
+5. SMTP credentials sealed as `coin-generator-smtp` (commands in the README).
+6. metrics-server in the cluster repo, then `hpa.enabled: true`.
+7. Required status checks on `main` (branch protection) including the E2E job.

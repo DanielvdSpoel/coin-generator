@@ -42,6 +42,12 @@ must be in the Reflector allow-list of `infrastructure/ghcr-pull-secret`.
      Ingress points its `tls.secretName` at it and sets no issuer annotation, so
      a new PR gets TLS instantly and teardown has no certificate to clean up.
      cert-manager renews it; Traefik reloads the Secret without a restart.
+   - `cluster/deployer-crd-rbac.yml` — lets the prod CI deployer manage the
+     chart's Traefik `Middleware`s, `ServiceMonitor` and `PrometheusRule` (the
+     built-in `admin` role does not cover CRDs). **Apply before the first
+     deploy that contains them**, or `helm upgrade` is refused.
+   - `cluster/preview-cleanup-cronjob.yml` — nightly janitor that uninstalls
+     previews not deployed for 14 days (missed `closed` events).
    Prod requests its own certificate through the Ingress annotation
    `cert-manager.io/cluster-issuer: letsencrypt-dns01`.
 2. CI credentials, one namespace-admin ServiceAccount per namespace:
@@ -71,12 +77,49 @@ must be in the Reflector allow-list of `infrastructure/ghcr-pull-secret`.
 4. Repo variable `PREVIEW_DOMAIN=coins.danielvdspoel.com`.
 5. Optional: a `ResourceQuota` in `coin-generator-preview` (add it to
    `cluster/`) so many open PRs cannot starve prod.
+6. Observability, applied by a cluster admin:
+   ```bash
+   kubectl apply --server-side -f deploy/grafana/coin-generator-dashboard.yml
+   ```
+   The dashboard lands in Grafana's "Apps" folder. It is generated: edit
+   `grafana/build_dashboard.py`, run it, commit both files. The
+   `ServiceMonitor` and `PrometheusRule` ship with the prod chart. For Uptime
+   Kuma, add a key to the `autokuma-monitors` ConfigMap in the cluster repo
+   (`monitoring/uptime-kuma/autokuma-monitors-configmap.yml`):
+   ```toml
+   coin-generator.toml: |
+     [http]
+     name = "Coin Designer"
+     url = "https://coins.danielvdspoel.com/api/health"
+     parent_name = "cluster"
+     expiry_notification = true
+   ```
 
 ## Day to day
 
 - Previews: automatic. The sticky PR comment carries the URL and image tags.
 - Prod: merge to `main`. The workflow waits for the rollout and smoke-tests
-  `/api/health`; on failure it runs `helm rollback`.
+  `/api/health`, the SPA and one real `/api/stats` build; on failure it runs
+  `helm rollback` and the job fails. The job summary shows the Helm history.
+- Releases: `git tag v1.2.3 && git push --tags` builds images tagged `1.2.3`
+  and `1.2` and creates a GitHub Release with generated notes. Deploys still
+  come from `main`; pin prod to a release with
+  `helm upgrade ... --set backend.image.tag=1.2.3 --set frontend.image.tag=1.2.3`.
+- Metrics: Grafana → Apps → Coin Designer (request rate, p95 per endpoint,
+  build times, cache hit ratio, timeouts, refused requests, pod CPU/memory).
+  Alerts (`CoinPreviewSlow`, `CoinApiErrors`, `CoinBuildTimeouts`,
+  `CoinApiReplicasLow`) go through the cluster's Alertmanager.
+- Logs: Loki, `{namespace="coin-generator", pod=~".*-api-.*"} | json`. Access
+  lines for GLB and export requests carry `config_hash` (the GLB ETag) and
+  `cache`; the dashboard's log panel filters by a hash prefix.
+- Abuse controls, outermost first: Traefik `rateLimit` on `/api` (10 req/s,
+  burst 20 per visitor), `buffering` (10 MB bodies), the backend's
+  per-visitor caps (1 export, 3 previews in flight → 429) and contact limit
+  (3 per 10 min), then the build timeout (20 s). The visitor is found in
+  `X-Forwarded-For` by skipping Cloudflare's ranges (`TRUSTED_PROXIES` in
+  `prod/values.yaml` and `apiMiddlewares.rateLimit.trustedProxies`; update both
+  when Cloudflare publishes new ranges).
+- Load test: `loadtest/README.md` (k6, 20 visitors dragging a slider).
 - Manual rollback:
   ```bash
   helm history coin-generator -n coin-generator
@@ -89,6 +132,13 @@ must be in the Reflector allow-list of `infrastructure/ghcr-pull-secret`.
   wildcard; cert-manager renews both. If the wildcard is ever deleted, re-apply
   `cluster/preview-wildcard-certificate.yml`; running previews pick up the new
   Secret without a redeploy.
+- A certificate that does not issue: `kubectl describe certificate -n <ns>`,
+  then the `CertificateRequest`, `Order` and `Challenge` it points to
+  (`kubectl get challenges -A`). DNS-01 failures are nearly always the
+  Cloudflare API token (SealedSecret in the cluster repo's
+  `infrastructure/cert-manager/`) or a stale `_acme-challenge` TXT record;
+  delete the failed `Challenge` to retry. Let's Encrypt rate limits show in the
+  `Order` status. Meanwhile Traefik serves its default certificate.
 
 ## Known gaps
 
@@ -99,12 +149,33 @@ must be in the Reflector allow-list of `infrastructure/ghcr-pull-secret`.
 
 - **No metrics-server on the cluster.** The prod backend runs a fixed 2 replicas;
   `hpa.enabled` stays false until metrics-server is installed from the cluster
-  repo (phase 8).
+  repo. The `CoinApiAtMaxReplicas` alert appears once it is enabled.
+- **Egress is not restricted.** The NetworkPolicies limit ingress to Traefik
+  (and Prometheus for the API). Pinning egress to DNS, the SMTP host and
+  filamentcolors.xyz needs a CiliumNetworkPolicy with `toFQDNs`.
+- **Frontend compression is gzip only**: the unprivileged nginx image has no
+  brotli module, and Cloudflare re-compresses for browsers anyway.
 - **Images must declare a numeric `USER`.** The chart sets `runAsNonRoot: true`,
   and Kubernetes rejects an image whose user is a name (`CreateContainerConfigError:
   image has non-numeric user`). Both Dockerfiles use numeric UIDs.
 
 ## Secrets
 
-None in phase 0. The contact email (phase 7/8) adds a `coin-generator-smtp`
-SealedSecret in the prod namespace; previews use the logging mailer.
+`coin-generator-smtp` in the prod namespace holds the SMTP settings for
+"request a print" (D19). The prod values read each key with `optional: true`,
+so until it exists the backend logs contact mails instead of sending them;
+after adding it, restart the API (`kubectl rollout restart deploy/coin-generator-api
+-n coin-generator`) or wait for the next deploy. Seal it with the cluster's
+controller (plain `kubeseal` works, see the cluster repo):
+
+```bash
+kubectl create secret generic coin-generator-smtp -n coin-generator --dry-run=client -o yaml \
+  --from-literal=SMTP_HOST=smtp.example.com --from-literal=SMTP_PORT=587 \
+  --from-literal=SMTP_USER=... --from-literal=SMTP_PASSWORD=... \
+  --from-literal=SMTP_FROM=coins@danielvdspoel.com \
+  | kubeseal -o yaml > deploy/cluster/smtp-sealedsecret.yml
+kubectl apply -f deploy/cluster/smtp-sealedsecret.yml
+```
+
+Previews never send mail: they have no SMTP settings, so the logging mailer
+is used.

@@ -23,6 +23,22 @@ ingress:
   certIssuer: letsencrypt-dns01
   annotations: {}
 
+# Same templates as prod; previews keep the CRD-based extras off, so the
+# namespace-scoped CI deployer needs no extra rights here and a preview is
+# never paged on. Previews send no mail: without SMTP settings the app logs it.
+apiMiddlewares:
+  rateLimit: { enabled: false }
+  buffering: { enabled: false }
+
+networkPolicy:
+  enabled: true
+  fromNamespaces: [traefik]
+
+monitoring:
+  serviceMonitor: false
+  prometheusRule: false
+  minApiReplicas: 1
+
 # -----------------------------------------------------------------------------
 # API (web-service chart). Service name: <release>-api
 # -----------------------------------------------------------------------------
