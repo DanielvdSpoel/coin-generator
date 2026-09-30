@@ -108,3 +108,11 @@ def test_bench_prints_both_qualities(engine_container, capsys) -> None:
     assert _run(["bench", "default", "--runs", "1"], engine_container) == 0
     out = capsys.readouterr().out
     assert "preview" in out and "export" in out and "union" in out
+
+
+def test_build_reads_a_template_file(tmp_path, engine_container) -> None:
+    template = TEMPLATES_DIR / "fancy-example.json"
+    out = tmp_path / "fancy.stl"
+    args = ["build", str(template), str(out), "--quality", "preview"]
+    assert _run(args, engine_container) == 0
+    assert out.stat().st_size > 0

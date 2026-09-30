@@ -79,6 +79,11 @@ function saveTemplate(): void {
   ui.showToast(t('templates.saved', { file }))
 }
 
+const BUILT_IN_TEMPLATES = 2
+const placeholders = computed(() =>
+  !catalog.templates.length && !health.error && !catalog.error ? BUILT_IN_TEMPLATES : 0,
+)
+
 function pick(lot: Lot): void {
   coin.loadConfig(lot.config, true)
   ui.clearAcknowledged()
@@ -120,6 +125,13 @@ function pick(lot: Lot): void {
         ⚑ {{ t('templates.offline') }}
       </p>
       <div class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-[18px]">
+        <!-- Placeholders while the built-in templates load, so the cards do not jump. -->
+        <div
+          v-for="n in placeholders"
+          :key="`placeholder-${n}`"
+          class="min-h-[300px] animate-pulse border border-hair bg-plate"
+          aria-hidden="true"
+        />
         <button
           v-for="(lot, i) in lots"
           :key="lot.id"

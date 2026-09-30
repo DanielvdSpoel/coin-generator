@@ -2,7 +2,8 @@
    Matte board ground, white plates with a hairline, one ink. The only chroma is
    the coin's own filaments. Archivo for the interface; the coin fonts come from
    the API (see useFontFaces). */
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap');
+/* Self-hosted: no render-blocking third-party request, nothing sent to Google. */
+@import '@fontsource-variable/archivo/wdth.css';
 
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -11,7 +12,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Archivo', system-ui, sans-serif;
+  --font-sans: 'Archivo Variable', system-ui, sans-serif;
   --font-heading: var(--font-sans);
   --color-board: var(--board);
   --color-board-2: var(--board-2);

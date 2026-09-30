@@ -42,7 +42,11 @@ FORMATS = (".stl", ".glb", ".3mf", ".zip")
 def _read_config(path: str) -> CoinConfig:
     if path == "default":
         return default_config()
-    return load_config(json.loads(Path(path).read_text(encoding="utf-8")))
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    # Template files (data/templates/*.json) wrap the design with id, name and thumbnail.
+    if isinstance(data, dict) and "config" in data and "schema_version" not in data:
+        data = data["config"]
+    return load_config(data)
 
 
 def build_bytes(
