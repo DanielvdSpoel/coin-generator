@@ -2,6 +2,7 @@
 #
 #   make dev        run backend + frontend with hot reload (docker compose)
 #   make test       backend pytest + frontend vitest
+#   make e2e        Playwright end-to-end tests (starts backend + Vite itself)
 #   make lint       ruff + eslint/oxlint/prettier + vue-tsc
 #   make helm-lint  lint and render both Helm umbrella charts
 #   make images     build both container images locally
@@ -18,10 +19,10 @@ NPM ?= npm --prefix frontend
 
 .PHONY: help dev dev-backend dev-frontend install test test-backend test-frontend \
         lint lint-backend lint-frontend format helm-lint images types clean \
-        coin filaments-snapshot
+        coin filaments-snapshot e2e
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install backend and frontend dependencies
 	cd backend && $(UV) sync
@@ -43,6 +44,9 @@ test-backend: ## Backend: pytest
 
 test-frontend: ## Frontend: vitest
 	$(NPM) run test:unit -- --run
+
+e2e: ## Frontend: Playwright end-to-end tests
+	$(NPM) run test:e2e
 
 lint: lint-backend lint-frontend ## Run all linters
 

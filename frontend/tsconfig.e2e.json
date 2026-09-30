@@ -1,0 +1,15 @@
+// Playwright end-to-end tests: they run in Node and drive a browser.
+{
+  "extends": "@tsconfig/node24/tsconfig.json",
+  "include": ["e2e/**/*.ts"],
+  "compilerOptions": {
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    // DOM for the callbacks that run in the page (page.evaluate, waitForFunction).
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo"
+  }
+}
