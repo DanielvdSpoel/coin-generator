@@ -7,7 +7,19 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue(), vueDevTools(), tailwindcss()],
+  plugins: [
+    // TresJS renders three.js objects as <TresXxx> tags; they are not Vue components.
+    vue({
+      template: {
+        compilerOptions: {
+          isCustomElement: (tag) =>
+            (tag.startsWith('Tres') && tag !== 'TresCanvas') || tag === 'primitive',
+        },
+      },
+    }),
+    vueDevTools(),
+    tailwindcss(),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

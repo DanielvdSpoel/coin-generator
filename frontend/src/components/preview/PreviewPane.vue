@@ -1,17 +1,21 @@
 <script setup lang="ts">
 /**
- * The right pane: a Front | Back | Whole coin strip and the face(s) beneath it.
- * Front and Back show one face large; Whole coin shows both at the same scale
- * (the 3D "in hand" view replaces this in phase 4).
+ * The right pane: a Front | Back | Whole coin strip and the view beneath it.
+ * Front and Back show one face large as SVG; Whole coin shows the coin "in
+ * hand", the real mesh from the server, or both faces flat when the server is
+ * away or the visitor prefers it.
  */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import SvgFace from '@/components/preview/SvgFace.vue'
+import ThreePreview from '@/components/preview/ThreePreview.vue'
+import { useDebouncedGlb } from '@/composables/useDebouncedGlb'
 import { faceModel } from '@/lib/svgCoin'
 import { previewSvg } from '@/services/coinService'
 import { useCatalogStore } from '@/stores/catalog'
 import { useCoinStore } from '@/stores/coin'
+import { useHealthStore } from '@/stores/health'
 import { useUiStore, type Tab } from '@/stores/ui'
 import type { FaceName } from '@/types/coin'
 
@@ -19,6 +23,7 @@ const { t } = useI18n()
 const coin = useCoinStore()
 const catalog = useCatalogStore()
 const ui = useUiStore()
+const health = useHealthStore()
 
 const tabs = computed<{ key: Tab; label: string; sub: string }[]>(() => [
   { key: 'front', label: t('tabs.front'), sub: t('tabs.frontSub') },
@@ -34,8 +39,35 @@ function model(face: FaceName) {
 const front = computed(() => model('front'))
 const back = computed(() => model('back'))
 
+// --- Whole coin: the 3D view ---------------------------------------------------
+const flat = ref(false)
+const highDetail = ref(false)
+const quality = computed(() => (highDetail.value ? 'export' : 'preview') as 'preview' | 'export')
+const threeD = computed(() => ui.tab === 'coin' && !flat.value && health.isOnline)
+const glb = useDebouncedGlb(
+  computed(() => coin.config),
+  { revision: computed(() => coin.revision), enabled: threeD, quality },
+)
+const viewer = ref<InstanceType<typeof ThreePreview> | null>(null)
+const views = [
+  { key: 'front', label: t('three.front') },
+  { key: 'back', label: t('three.back') },
+  { key: 'edge', label: t('three.edge') },
+] as const
+
+const status = computed(() => {
+  if (glb.error.value) return t(`three.errors.${glb.error.value}`, t('three.errors.network'))
+  if (glb.loading.value) return glb.blobUrl.value ? t('three.updating') : t('three.loading')
+  return glb.loadedQuality.value === 'export' ? t('three.exportQuality') : ''
+})
+
 const hint = computed(() => {
-  if (ui.tab === 'coin') return t('preview.bothHint')
+  if (ui.tab === 'coin')
+    return threeD.value
+      ? t('three.dragHint')
+      : health.isOnline
+        ? t('preview.bothHint')
+        : t('three.offline')
   return coin.config.faces[ui.activeFace].icon ? t('preview.iconHint') : ''
 })
 const warnCount = (face: FaceName) => ui.warningsFor(face).length
@@ -104,6 +136,44 @@ watch(
           :label="ui.tab === 'back' ? t('preview.backLabel') : t('preview.frontLabel')"
         />
       </div>
+      <template v-else-if="threeD">
+        <div class="absolute inset-0">
+          <ThreePreview ref="viewer" :blob-url="glb.blobUrl.value" :relief-hex="relief" />
+        </div>
+        <div
+          v-if="glb.loading.value"
+          class="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-hair"
+          aria-hidden="true"
+        >
+          <div class="h-full w-1/3 animate-[slide_1.1s_linear_infinite] bg-ink" />
+        </div>
+        <span
+          class="pointer-events-none absolute top-3.5 left-3.5 text-xs text-ink-2"
+          aria-live="polite"
+          >{{ status }}</span
+        >
+        <div class="absolute top-3 right-3 flex border border-hair bg-plate">
+          <button
+            v-for="(v, i) in views"
+            :key="v.key"
+            type="button"
+            class="cursor-pointer px-[11px] py-[5px] text-xs text-ink hover:bg-board"
+            :class="i ? 'border-l border-hair' : ''"
+            @click="viewer?.lookFrom(v.key)"
+          >
+            {{ v.label }}
+          </button>
+        </div>
+        <div
+          v-if="glb.error.value"
+          class="absolute inset-x-0 bottom-9 mx-auto flex w-max max-w-[90%] items-baseline gap-3.5 border border-ink bg-plate px-3.5 py-2"
+        >
+          <span>⚑ {{ status }}</span>
+          <button type="button" class="link font-semibold" @click="glb.refresh()">
+            {{ t('three.retry') }}
+          </button>
+        </div>
+      </template>
       <div v-else class="grid w-[min(920px,94%)] grid-cols-2 gap-8">
         <figure
           v-for="face in ['front', 'back'] as const"
@@ -136,6 +206,18 @@ watch(
         class="pointer-events-none absolute right-0 bottom-3 left-0 text-center text-xs text-ink-2"
         >{{ hint }}</span
       >
+      <div
+        v-if="ui.tab === 'coin' && health.isOnline"
+        class="absolute right-3 bottom-3 z-2 flex items-center gap-4 text-xs text-ink-2"
+      >
+        <label class="flex cursor-pointer items-center gap-1.5">
+          <input v-model="highDetail" type="checkbox" :disabled="flat" />
+          {{ t('three.highDetail') }}
+        </label>
+        <label class="flex cursor-pointer items-center gap-1.5">
+          <input v-model="flat" type="checkbox" /> {{ t('three.flat') }}
+        </label>
+      </div>
     </div>
   </section>
 </template>

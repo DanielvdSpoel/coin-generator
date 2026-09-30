@@ -58,6 +58,25 @@
     "iconHint": "Move, resize and rotate the emblem from the Emblem notes.",
     "warningsOnFace": "{n} thing to check on this face | {n} things to check on this face"
   },
+  "three": {
+    "front": "Front",
+    "back": "Back",
+    "edge": "Edge",
+    "loading": "Building the coin…",
+    "updating": "Updating…",
+    "exportQuality": "Full detail",
+    "highDetail": "High detail",
+    "flat": "Flat faces",
+    "dragHint": "Drag to turn the coin · scroll to zoom",
+    "offline": "The 3D view needs the server, which is not reachable. Both faces are shown flat.",
+    "retry": "Retry",
+    "errors": {
+      "busy": "The server is busy; the last coin stays until it catches up.",
+      "not_watertight": "The coin could not be built as a solid. This is a bug; the last good coin stays.",
+      "invalid": "The server rejected this design. The last good coin stays.",
+      "network": "The 3D view could not update; the last good coin stays."
+    }
+  },
   "sections": {
     "inscription": "Inscription",
     "emblem": "Emblem",

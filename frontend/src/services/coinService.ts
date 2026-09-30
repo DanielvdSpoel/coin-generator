@@ -19,3 +19,14 @@ export async function previewSvg(config: CoinConfig, face: FaceName): Promise<st
   const blob = await blobFetcher('/preview/svg', { method: 'POST', body: { config, face } })
   return blob.text()
 }
+
+export type GlbQuality = 'preview' | 'export'
+
+/** The coin as GLB. Rejects with `ApiError` on 4xx/5xx and `AbortError` when cancelled. */
+export function previewGlb(
+  config: CoinConfig,
+  quality: GlbQuality,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  return blobFetcher('/preview/glb', { method: 'POST', body: { config, quality }, signal })
+}
