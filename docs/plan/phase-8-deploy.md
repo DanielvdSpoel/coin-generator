@@ -170,15 +170,21 @@ the end.
   fixed: 500s from an earcut triangulation that was not a volume, and a mesh
   cache using ~14× its estimate (would have OOM-killed a full pod).
 
-**Waiting on a cluster admin / other repos** (not done from here):
+**Live since 2026-10-01** (Helm revision 3). The deployer CRD RBAC, preview
+janitor and Grafana dashboard are applied. Verified in prod:
+- Both API pods are scraped (`up = 1`) and the four alert rules are loaded.
+- `/metrics` is not reachable through the Ingress.
+- The Traefik limit passes 21 of a 40-request burst to `/api` and leaves the
+  SPA alone.
+- Three concurrent exports from one visitor over two pods give one 429.
+- GLBs are served gzip-encoded through Cloudflare.
 
-1. `kubectl apply -f deploy/cluster/deployer-crd-rbac.yml` *before* this
-   branch's first prod deploy, else helm cannot create the Middlewares,
-   ServiceMonitor and PrometheusRule and the deploy fails (prod keeps running
-   the previous revision).
-2. `kubectl apply -f deploy/cluster/preview-cleanup-cronjob.yml`.
-3. `kubectl apply --server-side -f deploy/grafana/coin-generator-dashboard.yml`.
-4. The autokuma entry in the cluster repo (snippet in `deploy/README.md`).
-5. SMTP credentials sealed as `coin-generator-smtp` (commands in the README).
-6. metrics-server in the cluster repo, then `hpa.enabled: true`.
-7. Required status checks on `main` (branch protection) including the E2E job.
+Still open, needing the cluster repo or input:
+
+1. The autokuma entry (snippet in `deploy/README.md`).
+2. SMTP credentials sealed as `coin-generator-smtp` (commands in the README).
+3. metrics-server, then `hpa.enabled: true`.
+4. Required status checks on `main` (branch protection) including the E2E job.
+5. Warm previews at the pod level: GLBs are cached per pod, so a slider drag
+   that alternates pods builds twice. If it matters, Traefik sticky sessions
+   on the API service would fix it.
