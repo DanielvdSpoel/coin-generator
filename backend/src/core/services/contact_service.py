@@ -1,0 +1,105 @@
+"""The "don't have a printer?" flow (decision D19): one email, nothing stored."""
+
+import json
+import time
+from dataclasses import dataclass
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+from src.core.config.models import CoinConfig
+from src.core.engine.quality import PREVIEW
+from src.core.engine.svg import face_svg
+from src.core.exceptions import InvalidConfig
+from src.core.interfaces.filament_registry import FilamentRegistry
+from src.core.interfaces.font_registry import FontRegistry
+from src.core.interfaces.mailer import Attachment, Mailer
+from src.core.services.coin_service import slugify
+from src.core.services.colors import resolve_colors
+
+
+class ContactRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=120)
+    email: EmailStr
+    message: str = Field("", max_length=4000)
+    attach_design: bool = False
+    config: CoinConfig | None = None
+    honeypot: str = ""
+    started_at: float = Field(description="Unix seconds when the form was opened")
+
+
+@dataclass(frozen=True)
+class ContactSettings:
+    to: str
+    min_seconds: float
+
+
+class ContactService:
+    def __init__(
+        self,
+        mailer: Mailer,
+        fonts: FontRegistry,
+        filaments: FilamentRegistry,
+        settings: ContactSettings,
+    ) -> None:
+        self._mailer = mailer
+        self._fonts = fonts
+        self._filaments = filaments
+        self._settings = settings
+
+    def send(self, request: ContactRequest, now: float | None = None) -> None:
+        """Validate the anti-spam rules and send. Raises ``InvalidConfig`` for bots."""
+        now = time.time() if now is None else now
+        if request.honeypot:
+            raise InvalidConfig(
+                "request rejected",
+                [{"loc": ["honeypot"], "msg": "must be empty", "code": "spam"}],
+            )
+        if now - request.started_at < self._settings.min_seconds:
+            raise InvalidConfig(
+                "request rejected",
+                [{"loc": ["started_at"], "msg": "form submitted too quickly", "code": "spam"}],
+            )
+        if request.attach_design and request.config is None:
+            raise InvalidConfig(
+                "attach_design needs a config",
+                [
+                    {
+                        "loc": ["config"],
+                        "msg": "required when attach_design is true",
+                        "code": "missing",
+                    }
+                ],
+            )
+
+        attachments: list[Attachment] = []
+        lines = [
+            f"Name: {request.name}",
+            f"Email: {request.email}",
+            "",
+            request.message or "(no message)",
+        ]
+        if request.attach_design and request.config is not None:
+            config = request.config
+            slug = slugify(config.meta.name, "design")
+            attachments.append(
+                Attachment(
+                    f"{slug}.coin.json",
+                    json.dumps(config.to_json_dict(), indent=1).encode("utf-8"),
+                    "application/json",
+                )
+            )
+            glyphs = self._fonts.glyphs(config.font)
+            colors = resolve_colors(config, self._filaments)
+            svg = face_svg(config, "front", glyphs, colors, PREVIEW)
+            attachments.append(
+                Attachment(f"{slug}-front.svg", svg.encode("utf-8"), "image/svg+xml")
+            )
+            lines += [
+                "",
+                f"Design: {config.meta.name or 'untitled'}, {config.size.diameter_mm:g} mm, "
+                f"{config.edge.style} edge",
+            ]
+        subject = f"Coin print request from {request.name}"
+        self._mailer.send(self._settings.to, subject, "\n".join(lines), attachments)

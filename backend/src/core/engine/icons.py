@@ -6,6 +6,7 @@ controls on top of ``trace_image``.
 """
 
 import io
+import math
 from pathlib import Path
 
 import numpy as np
@@ -79,18 +80,28 @@ def place_icon(geom: BaseGeometry, placement: IconPlacement, r_limit: float) -> 
     return geom
 
 
-def trace_image(image: Image.Image, simplify: float = 0.4) -> BaseGeometry:
+def trace_image(
+    image: Image.Image,
+    simplify: float = 0.4,
+    threshold: int = 128,
+    invert: bool = False,
+) -> BaseGeometry:
     """Raster → normalised geometry by marching squares.
 
-    Uses alpha when the image has real transparency, darkness otherwise. The
-    ``simplify`` removes the pixel stair-steps that would otherwise triangulate into
-    degenerate faces (engine gotcha #3); the Y flip turns image rows into Y-up
-    geometry (gotcha #5).
+    Uses alpha when the image has real transparency, darkness otherwise (``invert``
+    flips that: light pixels become ink). The ``simplify`` removes the pixel
+    stair-steps that would otherwise triangulate into degenerate faces (engine
+    gotcha #3); the Y flip turns image rows into Y-up geometry (gotcha #5).
     """
     from skimage import measure
 
     a = np.array(image.convert("RGBA"))
-    mask = (a[:, :, 3] > 128) if a[:, :, 3].min() < 250 else (a[:, :, :3].min(2) < 200)
+    if a[:, :, 3].min() < 250:
+        mask = a[:, :, 3] > threshold
+    else:
+        mask = a[:, :, :3].min(2) < (255 - threshold)
+    if invert:
+        mask = ~mask
     if not mask.any():
         raise IconTraceFailed("nothing to trace: the image has no ink")
     mask = np.pad(mask.astype(np.uint8), 2)  # pad so shapes touching the border close
@@ -102,6 +113,42 @@ def trace_image(image: Image.Image, simplify: float = 0.4) -> BaseGeometry:
     geom = rings_to_poly(loops).simplify(simplify).buffer(0)
     geom = affinity.scale(geom, 1, -1, origin=(0, 0))  # image Y-down → geometry Y-up
     return normalise(geom)
+
+
+def isolate(
+    geom: BaseGeometry,
+    drop_largest: bool = False,
+    inner_disc: float | None = None,
+    min_area: float = 0.0,
+) -> tuple[BaseGeometry, list[str]]:
+    """Badge isolation on a traced geometry (``coin-tool-addendum.md`` §1).
+
+    ``drop_largest`` removes the biggest part (a coin body around the logo);
+    ``inner_disc`` keeps only parts whose centroid lies within that fraction of the
+    max radius; ``min_area`` drops parts below that fraction of the total area.
+    Returns the surviving geometry and human-readable notes on what was removed.
+    """
+    parts = list(polygons(geom))
+    notes: list[str] = []
+    if drop_largest and len(parts) > 1:
+        largest = max(parts, key=lambda p: p.area)
+        parts = [p for p in parts if p is not largest]
+        notes.append("largest part removed as background")
+    if inner_disc is not None and parts:
+        limit = inner_disc * max_radius(geom)
+        kept = [p for p in parts if math.hypot(p.centroid.x, p.centroid.y) <= limit]
+        if len(kept) < len(parts):
+            notes.append(f"{len(parts) - len(kept)} part(s) outside the inner disc removed")
+        parts = kept
+    if min_area > 0 and parts:
+        total = sum(p.area for p in parts)
+        kept = [p for p in parts if p.area >= min_area * total]
+        if len(kept) < len(parts):
+            notes.append(f"{len(parts) - len(kept)} tiny part(s) removed")
+        parts = kept
+    if not parts:
+        raise IconTraceFailed("nothing left after isolation; relax the filters")
+    return unary_union(parts), notes
 
 
 def trace_png(source: str | Path | bytes, simplify: float = 0.4) -> BaseGeometry:

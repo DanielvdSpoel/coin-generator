@@ -6,6 +6,7 @@
     uv run python -m src.cli svg design.coin.json --face front > front.svg
     uv run python -m src.cli bench design.coin.json
     uv run python -m src.cli filaments-snapshot
+    uv run python -m src.cli openapi > openapi.json
 
 The output format of ``build`` follows the file extension: ``.stl`` (single
 material), ``.glb`` (preview with materials), ``.3mf`` (two-tone print file) or
@@ -110,6 +111,15 @@ def _cmd_bench(args: argparse.Namespace, container: Container) -> int:
     return 0
 
 
+def _cmd_openapi(args: argparse.Namespace, container: Container) -> int:
+    from src.main import create_app
+
+    schema = create_app(container, warm=False).openapi()
+    json.dump(schema, sys.stdout, indent=2, sort_keys=True)
+    sys.stdout.write("\n")
+    return 0
+
+
 def _cmd_filaments_snapshot(args: argparse.Namespace, container: Container) -> int:
     settings = container.settings
     path = settings.data_dir / "filaments.snapshot.json"
@@ -148,6 +158,9 @@ def _parser() -> argparse.ArgumentParser:
     bench.add_argument("config", help=config_help)
     bench.add_argument("--runs", type=int, default=3, help="runs per quality; the best is shown")
     bench.set_defaults(run=_cmd_bench)
+
+    openapi = sub.add_parser("openapi", help="print the OpenAPI schema as JSON")
+    openapi.set_defaults(run=_cmd_openapi)
 
     snapshot = sub.add_parser(
         "filaments-snapshot", help="refresh data/filaments.snapshot.json from filamentcolors.xyz"

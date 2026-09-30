@@ -12,10 +12,19 @@ from functools import cached_property, lru_cache
 from src.adapters.disk_font_registry import DiskFontRegistry
 from src.adapters.filamentcolors_source import FilamentColorsSource, SnapshotFilamentSource
 from src.adapters.fonttools_font_parser import FontToolsFontParser
+from src.adapters.lru_mesh_cache import LruMeshCache
 from src.adapters.memory_filament_registry import MemoryFilamentRegistry, load_overrides
+from src.adapters.smtp_mailer import LoggingMailer, SmtpMailer
 from src.core.interfaces.filament_registry import FilamentRegistry
 from src.core.interfaces.font_parser import FontParser
 from src.core.interfaces.font_registry import FontRegistry
+from src.core.interfaces.mailer import Mailer
+from src.core.interfaces.mesh_cache import MeshCache
+from src.core.services.catalog_service import CatalogService
+from src.core.services.coin_service import BuildExecutor, CoinService
+from src.core.services.contact_service import ContactService, ContactSettings
+from src.core.services.font_service import FontService
+from src.core.services.icon_service import IconService
 from src.core.services.validation_service import ValidationService
 from src.settings import Settings, get_settings
 
@@ -52,6 +61,34 @@ class Container:
             refresh_hours=settings.filamentcolors_refresh_hours,
         )
 
+    @cached_property
+    def _mesh_cache(self) -> MeshCache:
+        return LruMeshCache(self.settings.cache_size_mb * 1024 * 1024)
+
+    @cached_property
+    def _build_executor(self) -> BuildExecutor:
+        return BuildExecutor(self.settings.build_workers, self.settings.build_timeout_s)
+
+    @cached_property
+    def _mailer(self) -> Mailer:
+        settings = self.settings
+        if settings.smtp_host and settings.environment != "test":
+            return SmtpMailer(
+                settings.smtp_host,
+                settings.smtp_port,
+                settings.smtp_from,
+                settings.smtp_user,
+                settings.smtp_password,
+            )
+        return LoggingMailer()
+
+    @cached_property
+    def _catalog_service(self) -> CatalogService:
+        # Cached because it renders template thumbnails once.
+        return CatalogService(
+            self.font_registry(), self.filament_registry(), self.settings.data_dir
+        )
+
     def font_parser(self) -> FontParser:
         return self._font_parser
 
@@ -61,12 +98,50 @@ class Container:
     def filament_registry(self) -> FilamentRegistry:
         return self._filament_registry
 
+    def filament_registry_impl(self) -> MemoryFilamentRegistry:
+        """The concrete registry, for the lifespan hook that runs its refresh thread."""
+        return self._filament_registry
+
+    def mesh_cache(self) -> MeshCache:
+        return self._mesh_cache
+
+    def build_executor(self) -> BuildExecutor:
+        return self._build_executor
+
+    def mailer(self) -> Mailer:
+        return self._mailer
+
     # Per call.
 
     def validation_service(self) -> ValidationService:
         return ValidationService(self.font_registry(), self.filament_registry())
 
-    # Later phases add mesh_cache(), coin_service(), ...
+    def coin_service(self) -> CoinService:
+        return CoinService(
+            self.font_registry(),
+            self.filament_registry(),
+            self.mesh_cache(),
+            self.build_executor(),
+            self.validation_service(),
+        )
+
+    def catalog_service(self) -> CatalogService:
+        return self._catalog_service
+
+    def font_service(self) -> FontService:
+        return FontService(self.font_parser())
+
+    def icon_service(self) -> IconService:
+        return IconService(self.settings.max_upload_bytes, self.settings.max_icon_vertices)
+
+    def contact_service(self) -> ContactService:
+        settings = self.settings
+        return ContactService(
+            self.mailer(),
+            self.font_registry(),
+            self.filament_registry(),
+            ContactSettings(to=settings.contact_to, min_seconds=settings.contact_min_seconds),
+        )
 
 
 @lru_cache(maxsize=1)

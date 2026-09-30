@@ -35,3 +35,11 @@ class IconTraceFailed(CoinError):
 
 class BuildTimeout(CoinError):
     """A build did not finish within the configured time."""
+
+
+class MailerError(CoinError):
+    """The contact email could not be sent."""
+
+
+class PayloadTooLarge(CoinError):
+    """An upload or request body exceeds the configured limit."""

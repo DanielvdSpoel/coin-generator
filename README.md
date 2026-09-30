@@ -26,6 +26,12 @@ Without Docker: `make dev-backend` and `make dev-frontend` in two terminals. The
 Vite dev server proxies `/api` to the backend, the same way the Ingress does in
 preview and prod.
 
+## API
+
+The backend serves the OpenAPI schema at `/api/openapi.json` (Swagger UI at
+`/api/docs` in dev). `backend/openapi.json` and `frontend/src/types/api.d.ts` are
+committed and regenerated with `make types`; CI fails when they drift.
+
 ## Engine CLI
 
 The geometry engine runs without the API. Paths are relative to `backend/`; use
@@ -37,6 +43,7 @@ uv run python -m src.cli build data/my.coin.json out.stl   # also .glb, .3mf, .z
 uv run python -m src.cli validate default                  # printability warnings
 uv run python -m src.cli svg default --face back > back.svg
 uv run python -m src.cli bench default                     # build timings per quality
+uv run python -m src.cli openapi > openapi.json            # the API schema
 ```
 
 `make filaments-snapshot` refreshes the committed filamentcolors.xyz snapshot.

@@ -47,6 +47,13 @@ def engine_container() -> Container:
 
 
 @pytest.fixture(scope="session")
+def api(engine_container: Container) -> TestClient:
+    """A client on the real fonts and data. The lifespan runs, warm-up is skipped."""
+    with TestClient(create_app(engine_container, warm=False)) as client:
+        yield client
+
+
+@pytest.fixture(scope="session")
 def glyphs(engine_container: Container) -> Glyphs:
     return engine_container.font_registry().glyphs(default_config().font)
 

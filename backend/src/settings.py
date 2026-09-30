@@ -25,13 +25,23 @@ class Settings(BaseSettings):
 
     # Geometry builds (used from phase 1 onwards)
     build_workers: int = 2
-    build_timeout_s: int = 20
+    build_timeout_s: float = 20
     cache_size_mb: int = 256
+    max_json_bytes: int = 2 * 1024 * 1024
 
     # Uploads and complexity limits (decision D14 / D18)
     max_upload_bytes: int = 10 * 1024 * 1024
     max_icon_vertices: int = 50_000
     max_font_bytes: int = 2 * 1024 * 1024
+
+    # Contact flow (decision D19). Without smtp_host the mail is only logged.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str = "coins@danielvdspoel.com"
+    contact_to: str = "contact@danielvdspoel.nl"
+    contact_min_seconds: float = 3.0
 
     # Data locations
     fonts_dir: Path = BACKEND_DIR / "fonts"

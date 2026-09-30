@@ -20,6 +20,8 @@ describe('health store', () => {
       version: '0.1.0',
       environment: 'test',
       fonts: 2,
+      filaments: 2256,
+      cache: { entries: 0, size_bytes: 0, hits: 0, misses: 0 },
     })
     const store = useHealthStore()
 

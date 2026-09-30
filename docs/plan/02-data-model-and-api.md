@@ -155,6 +155,7 @@ All JSON in, JSON or binary out. Prefix `/api`. All geometry endpoints accept
 | `GET /api/healthz` | | `200` | liveness |
 | `GET /api/health` | | `200 { fonts: n, filaments: n }` | readiness; fails if fonts missing |
 | `GET /api/fonts` | | `[{ key, name, single_story_a, woff2_url }]` | built-in fonts only |
+| `GET /api/fonts/{key}.woff2` | | `font/woff2` | the file `woff2_url` points at; immutable cache header |
 | `POST /api/fonts/inspect` | multipart: `file` (≤ 2 MB) | `{ name, family, style, format, glyph_count, sample_svg, warnings }` | validates and describes a custom font; the client then embeds it in the config. Stateless. |
 | `GET /api/filaments` | optional `?q=`, `?vendor=` | `[{ id, name, vendor, material, finish, hex, hex_source: "measured"\|"override", source_url }]` | served from the in-memory registry; refreshed from filamentcolors.xyz on a timer |
 | `GET /api/filaments/version` | | `{ db_version, db_last_modified, refreshed_at }` | lets the SPA cache the list in localStorage and revalidate cheaply |
@@ -163,8 +164,8 @@ All JSON in, JSON or binary out. Prefix `/api`. All geometry endpoints accept
 | `GET /api/schema/coin-config` | | JSON Schema of the current version | used by the TS generator and for client-side validation |
 | `POST /api/validate` | `{ config }` | `{ ok, config, warnings: [{ code, severity, msg, path }] }` | returns the migrated + normalised config |
 | `POST /api/preview/svg` | `{ config, face }` | `image/svg+xml` | optional authoritative 2D render (D3) |
-| `POST /api/preview/glb` | `{ config, quality?: "preview"\|"export" }` | `model/gltf-binary`, `ETag` | two PBR materials; gzip |
-| `POST /api/export` | `{ config, format: "stl"\|"3mf"\|"stl-pair" }` | binary, `Content-Disposition: attachment` | full quality; refuses non-watertight |
+| `POST /api/preview/glb` | `{ config, quality?: "preview"\|"export" }` | `model/gltf-binary`, `ETag`, `X-Cache` | three PBR materials (relief, front inlay, back inlay); `If-None-Match` → 304; gzip |
+| `POST /api/export` | `{ config, format: "stl"\|"3mf"\|"stl-pair" }` | binary, `Content-Disposition: attachment`, `X-Coin-Warnings` | full quality; refuses non-watertight (500 `not_watertight`) |
 | `POST /api/contact` | `{ name, email, message?, attach_design: bool, config?: CoinConfig, honeypot: "", started_at }` | `202 {}` | sends one email to the site owner; design attached as `<slug>.coin.json` plus a rendered front-face SVG; rate-limited per IP; honeypot and minimum fill time reject bots (D19) |
 | `POST /api/icons/trace` | multipart: `file` (≤ 10 MB, D14), plus JSON `options` (threshold, simplify, drop_largest, inner_disc, min_area, invert, embed_source) | `{ geometry: IconGeometry, preview_svg, parts, holes, bbox, warnings }` | stateless; PNG/SVG/JPEG; SVG is rasterised first |
 
@@ -181,7 +182,7 @@ All JSON in, JSON or binary out. Prefix `/api`. All geometry endpoints accept
 | `teeth_too_fine` | warn | reeding pitch below 2× nozzle width |
 | `body_thin` | warn | `body_mm < 1.5` |
 | `missing_glyph` | error | the chosen font lacks a glyph for a character in the texts (common with decorative custom fonts and accents) |
-| `filament_unknown` | info | a filament id no longer resolves; colour kept as hex |
+| `filament_unknown` | info | a filament id no longer resolves; `/validate` replaces it with `#808080`, other endpoints answer 422 |
 
 Severity `error` does not block `/export` in v1; the UI shows it prominently. Revisit
 after real use.

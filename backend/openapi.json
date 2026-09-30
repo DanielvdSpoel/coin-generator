@@ -1,0 +1,1935 @@
+{
+  "components": {
+    "schemas": {
+      "Body_inspect_font_api_fonts_inspect_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_inspect_font_api_fonts_inspect_post",
+        "type": "object"
+      },
+      "Body_trace_api_icons_trace_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "JSON TraceOptions",
+            "title": "Options"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_trace_api_icons_trace_post",
+        "type": "object"
+      },
+      "CoinConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "colors": {
+            "$ref": "#/components/schemas/Colors"
+          },
+          "edge": {
+            "$ref": "#/components/schemas/Edge"
+          },
+          "faces": {
+            "$ref": "#/components/schemas/Faces"
+          },
+          "font": {
+            "$ref": "#/components/schemas/FontRef"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          },
+          "print": {
+            "$ref": "#/components/schemas/PrintSettings"
+          },
+          "rings": {
+            "$ref": "#/components/schemas/Rings"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "size": {
+            "$ref": "#/components/schemas/Size"
+          }
+        },
+        "title": "CoinConfig",
+        "type": "object"
+      },
+      "ColorRef": {
+        "additionalProperties": false,
+        "description": "Either a registry ``filament`` id or a literal ``hex`` colour, never both.",
+        "properties": {
+          "filament": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filament"
+          },
+          "hex": {
+            "anyOf": [
+              {
+                "pattern": "^#[0-9a-fA-F]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hex"
+          }
+        },
+        "title": "ColorRef",
+        "type": "object"
+      },
+      "Colors": {
+        "additionalProperties": false,
+        "properties": {
+          "relief": {
+            "$ref": "#/components/schemas/ColorRef"
+          }
+        },
+        "title": "Colors",
+        "type": "object"
+      },
+      "ConfigBody": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/CoinConfig"
+          }
+        },
+        "required": [
+          "config"
+        ],
+        "title": "ConfigBody",
+        "type": "object"
+      },
+      "ContactRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "attach_design": {
+            "default": false,
+            "title": "Attach Design",
+            "type": "boolean"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoinConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "honeypot": {
+            "default": "",
+            "title": "Honeypot",
+            "type": "string"
+          },
+          "message": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Message",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "started_at": {
+            "description": "Unix seconds when the form was opened",
+            "title": "Started At",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "started_at"
+        ],
+        "title": "ContactRequest",
+        "type": "object"
+      },
+      "CustomFont": {
+        "additionalProperties": false,
+        "description": "A user-uploaded font, embedded so the template stays self-contained (D18).",
+        "properties": {
+          "data": {
+            "title": "Data",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "ttf",
+              "otf",
+              "woff",
+              "woff2"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "title": "Name",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "format",
+          "sha256",
+          "data"
+        ],
+        "title": "CustomFont",
+        "type": "object"
+      },
+      "Dots": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "radius": {
+            "default": 5.0,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Radius",
+            "type": "number"
+          }
+        },
+        "title": "Dots",
+        "type": "object"
+      },
+      "Edge": {
+        "additionalProperties": false,
+        "properties": {
+          "depth": {
+            "default": 2.0,
+            "maximum": 5.0,
+            "minimum": 0.5,
+            "title": "Depth",
+            "type": "number"
+          },
+          "style": {
+            "default": "reeded",
+            "enum": [
+              "plain",
+              "reeded"
+            ],
+            "title": "Style",
+            "type": "string"
+          },
+          "teeth": {
+            "default": 120,
+            "maximum": 300.0,
+            "minimum": 40.0,
+            "title": "Teeth",
+            "type": "integer"
+          }
+        },
+        "title": "Edge",
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Loc",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "code"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "ExportBody": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/CoinConfig"
+          },
+          "format": {
+            "default": "stl",
+            "enum": [
+              "stl",
+              "3mf",
+              "stl-pair"
+            ],
+            "title": "Format",
+            "type": "string"
+          }
+        },
+        "required": [
+          "config"
+        ],
+        "title": "ExportBody",
+        "type": "object"
+      },
+      "FaceConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "bottom_text": {
+            "$ref": "#/components/schemas/TextConfig"
+          },
+          "dots": {
+            "$ref": "#/components/schemas/Dots"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IconPlacement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inlay": {
+            "$ref": "#/components/schemas/ColorRef"
+          },
+          "top_text": {
+            "$ref": "#/components/schemas/TextConfig"
+          }
+        },
+        "title": "FaceConfig",
+        "type": "object"
+      },
+      "Faces": {
+        "additionalProperties": false,
+        "properties": {
+          "back": {
+            "$ref": "#/components/schemas/FaceConfig"
+          },
+          "front": {
+            "$ref": "#/components/schemas/FaceConfig"
+          }
+        },
+        "title": "Faces",
+        "type": "object"
+      },
+      "FilamentDTO": {
+        "properties": {
+          "finish": {
+            "title": "Finish",
+            "type": "string"
+          },
+          "hex": {
+            "title": "Hex",
+            "type": "string"
+          },
+          "hex_source": {
+            "enum": [
+              "measured",
+              "override"
+            ],
+            "title": "Hex Source",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "material": {
+            "title": "Material",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "vendor": {
+            "title": "Vendor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "vendor",
+          "material",
+          "finish",
+          "hex",
+          "hex_source"
+        ],
+        "title": "FilamentDTO",
+        "type": "object"
+      },
+      "FilamentVersionDTO": {
+        "properties": {
+          "db_last_modified": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Db Last Modified"
+          },
+          "db_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Db Version"
+          },
+          "refreshed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refreshed At"
+          }
+        },
+        "required": [
+          "db_version",
+          "db_last_modified",
+          "refreshed_at"
+        ],
+        "title": "FilamentVersionDTO",
+        "type": "object"
+      },
+      "FontDTO": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "single_story_a": {
+            "title": "Single Story A",
+            "type": "boolean"
+          },
+          "woff2_url": {
+            "title": "Woff2 Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "single_story_a",
+          "woff2_url"
+        ],
+        "title": "FontDTO",
+        "type": "object"
+      },
+      "FontInspectResponse": {
+        "properties": {
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "glyph_count": {
+            "title": "Glyph Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sample_svg": {
+            "title": "Sample Svg",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "style": {
+            "title": "Style",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "family",
+          "style",
+          "format",
+          "glyph_count",
+          "sha256",
+          "sample_svg",
+          "warnings"
+        ],
+        "title": "FontInspectResponse",
+        "type": "object"
+      },
+      "FontRef": {
+        "additionalProperties": false,
+        "description": "Either a built-in font by ``key`` or an embedded ``custom`` font.",
+        "properties": {
+          "custom": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CustomFont"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          }
+        },
+        "title": "FontRef",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "cache": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Cache",
+            "type": "object"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "filaments": {
+            "title": "Filaments",
+            "type": "integer"
+          },
+          "fonts": {
+            "title": "Fonts",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "environment",
+          "fonts",
+          "filaments",
+          "cache"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "IconGeometry": {
+        "additionalProperties": false,
+        "description": "Traced outline: max radius 100, centred on the origin, Y up.",
+        "properties": {
+          "polygons": {
+            "items": {
+              "$ref": "#/components/schemas/IconPolygon"
+            },
+            "minItems": 1,
+            "title": "Polygons",
+            "type": "array"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IconSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "polygons"
+        ],
+        "title": "IconGeometry",
+        "type": "object"
+      },
+      "IconPlacement": {
+        "additionalProperties": false,
+        "properties": {
+          "dx": {
+            "default": 0.0,
+            "maximum": 160.0,
+            "minimum": -160.0,
+            "title": "Dx",
+            "type": "number"
+          },
+          "dy": {
+            "default": 0.0,
+            "maximum": 160.0,
+            "minimum": -160.0,
+            "title": "Dy",
+            "type": "number"
+          },
+          "fit": {
+            "default": 0.82,
+            "exclusiveMinimum": 0.0,
+            "maximum": 2.0,
+            "title": "Fit",
+            "type": "number"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/IconGeometry"
+          },
+          "rot": {
+            "default": 0.0,
+            "maximum": 360.0,
+            "minimum": -360.0,
+            "title": "Rot",
+            "type": "number"
+          }
+        },
+        "required": [
+          "geometry"
+        ],
+        "title": "IconPlacement",
+        "type": "object"
+      },
+      "IconPolygon": {
+        "additionalProperties": false,
+        "properties": {
+          "exterior": {
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Exterior",
+            "type": "array"
+          },
+          "holes": {
+            "items": {
+              "items": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "title": "Holes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "exterior"
+        ],
+        "title": "IconPolygon",
+        "type": "object"
+      },
+      "IconSource": {
+        "additionalProperties": false,
+        "description": "Provenance of a traced icon. Optional and not hashed.",
+        "properties": {
+          "data_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Url"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "trace": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TraceOptions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "IconSource",
+        "type": "object"
+      },
+      "Meta": {
+        "additionalProperties": true,
+        "description": "Free-form, excluded from hashing.",
+        "properties": {
+          "created_with": {
+            "default": "",
+            "title": "Created With",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "title": "Meta",
+        "type": "object"
+      },
+      "PresetDTO": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "patch": {
+            "additionalProperties": true,
+            "title": "Patch",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "patch"
+        ],
+        "title": "PresetDTO",
+        "type": "object"
+      },
+      "PreviewGlbBody": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/CoinConfig"
+          },
+          "quality": {
+            "default": "preview",
+            "enum": [
+              "preview",
+              "export"
+            ],
+            "title": "Quality",
+            "type": "string"
+          }
+        },
+        "required": [
+          "config"
+        ],
+        "title": "PreviewGlbBody",
+        "type": "object"
+      },
+      "PreviewSvgBody": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/CoinConfig"
+          },
+          "face": {
+            "default": "front",
+            "enum": [
+              "front",
+              "back"
+            ],
+            "title": "Face",
+            "type": "string"
+          },
+          "quality": {
+            "default": "export",
+            "enum": [
+              "preview",
+              "export"
+            ],
+            "title": "Quality",
+            "type": "string"
+          }
+        },
+        "required": [
+          "config"
+        ],
+        "title": "PreviewSvgBody",
+        "type": "object"
+      },
+      "PrintSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "enamel_depth_mm": {
+            "default": 0.4,
+            "maximum": 1.0,
+            "minimum": 0.2,
+            "title": "Enamel Depth Mm",
+            "type": "number"
+          },
+          "nozzle_mm": {
+            "default": 0.4,
+            "maximum": 1.2,
+            "minimum": 0.1,
+            "title": "Nozzle Mm",
+            "type": "number"
+          }
+        },
+        "title": "PrintSettings",
+        "type": "object"
+      },
+      "Rings": {
+        "additionalProperties": false,
+        "properties": {
+          "divider": {
+            "default": true,
+            "title": "Divider",
+            "type": "boolean"
+          },
+          "r_div_in": {
+            "default": 101.0,
+            "title": "R Div In",
+            "type": "number"
+          },
+          "r_div_out": {
+            "default": 113.0,
+            "title": "R Div Out",
+            "type": "number"
+          },
+          "r_edge": {
+            "default": 160.0,
+            "title": "R Edge",
+            "type": "number"
+          },
+          "r_inlay": {
+            "default": 143.0,
+            "title": "R Inlay",
+            "type": "number"
+          },
+          "r_rim": {
+            "default": 151.0,
+            "title": "R Rim",
+            "type": "number"
+          }
+        },
+        "title": "Rings",
+        "type": "object"
+      },
+      "Size": {
+        "additionalProperties": false,
+        "properties": {
+          "body_mm": {
+            "default": 2.5,
+            "maximum": 6.0,
+            "minimum": 1.0,
+            "title": "Body Mm",
+            "type": "number"
+          },
+          "diameter_mm": {
+            "default": 50.0,
+            "maximum": 100.0,
+            "minimum": 30.0,
+            "title": "Diameter Mm",
+            "type": "number"
+          },
+          "relief_mm": {
+            "default": 0.7,
+            "maximum": 2.0,
+            "minimum": 0.3,
+            "title": "Relief Mm",
+            "type": "number"
+          }
+        },
+        "title": "Size",
+        "type": "object"
+      },
+      "TemplateDTO": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/CoinConfig"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "thumbnail_svg": {
+            "title": "Thumbnail Svg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "thumbnail_svg",
+          "config"
+        ],
+        "title": "TemplateDTO",
+        "type": "object"
+      },
+      "TextConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "letter_spacing": {
+            "default": 1.2,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Letter Spacing",
+            "type": "number"
+          },
+          "radius": {
+            "title": "Radius",
+            "type": "number"
+          },
+          "size": {
+            "default": 26.0,
+            "maximum": 60.0,
+            "minimum": 10.0,
+            "title": "Size",
+            "type": "number"
+          },
+          "text": {
+            "default": "",
+            "maxLength": 40,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "radius"
+        ],
+        "title": "TextConfig",
+        "type": "object"
+      },
+      "TraceOptions": {
+        "additionalProperties": false,
+        "properties": {
+          "drop_largest": {
+            "default": false,
+            "title": "Drop Largest",
+            "type": "boolean"
+          },
+          "inner_disc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inner Disc"
+          },
+          "invert": {
+            "default": false,
+            "title": "Invert",
+            "type": "boolean"
+          },
+          "min_area": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Min Area",
+            "type": "number"
+          },
+          "simplify": {
+            "default": 0.4,
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Simplify",
+            "type": "number"
+          },
+          "threshold": {
+            "default": 128,
+            "maximum": 255.0,
+            "minimum": 0.0,
+            "title": "Threshold",
+            "type": "integer"
+          }
+        },
+        "title": "TraceOptions",
+        "type": "object"
+      },
+      "TraceResponse": {
+        "properties": {
+          "bbox": {
+            "maxItems": 4,
+            "minItems": 4,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Bbox",
+            "type": "array"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/IconGeometry"
+          },
+          "holes": {
+            "title": "Holes",
+            "type": "integer"
+          },
+          "parts": {
+            "title": "Parts",
+            "type": "integer"
+          },
+          "preview_svg": {
+            "title": "Preview Svg",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "geometry",
+          "preview_svg",
+          "parts",
+          "holes",
+          "bbox",
+          "warnings"
+        ],
+        "title": "TraceResponse",
+        "type": "object"
+      },
+      "ValidateResponse": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/CoinConfig"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/WarningDTO"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ok",
+          "config",
+          "warnings"
+        ],
+        "title": "ValidateResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WarningDTO": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "msg": {
+            "title": "Msg",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warn",
+              "error"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "msg",
+          "path"
+        ],
+        "title": "WarningDTO",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Coin Designer API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/contact": {
+      "post": {
+        "description": "\"Don't have a printer?\": send one email to the site owner (decision D19).",
+        "operationId": "contact_api_contact_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Contact Api Contact Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "Contact",
+        "tags": [
+          "contact"
+        ]
+      }
+    },
+    "/api/export": {
+      "post": {
+        "description": "Full-quality print file. Warnings ride along in ``X-Coin-Warnings``.",
+        "operationId": "export_api_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Export",
+        "tags": [
+          "coin"
+        ]
+      }
+    },
+    "/api/filaments": {
+      "get": {
+        "operationId": "filaments_api_filaments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "vendor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Vendor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FilamentDTO"
+                  },
+                  "title": "Response Filaments Api Filaments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Filaments",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/filaments/version": {
+      "get": {
+        "operationId": "filaments_version_api_filaments_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilamentVersionDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Filaments Version",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/fonts": {
+      "get": {
+        "description": "Built-in fonts; ``woff2_url`` is what the SPA loads for the 2D preview.",
+        "operationId": "fonts_api_fonts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FontDTO"
+                  },
+                  "title": "Response Fonts Api Fonts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Fonts",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/fonts/inspect": {
+      "post": {
+        "description": "Validate and describe a font upload; the client embeds it in the config itself.",
+        "operationId": "inspect_font_api_fonts_inspect_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_inspect_font_api_fonts_inspect_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FontInspectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Inspect Font",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/fonts/{key}.woff2": {
+      "get": {
+        "operationId": "font_file_api_fonts__key__woff2_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Font File",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "description": "Readiness: at least one font loads and the filament registry has entries.",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/healthz": {
+      "get": {
+        "description": "Liveness: the process answers HTTP.",
+        "operationId": "healthz_api_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Healthz Api Healthz Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/icons/trace": {
+      "post": {
+        "description": "Trace an uploaded PNG or JPEG into icon geometry. Stateless: nothing is stored.",
+        "operationId": "trace_api_icons_trace_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_trace_api_icons_trace_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Trace",
+        "tags": [
+          "icons"
+        ]
+      }
+    },
+    "/api/presets": {
+      "get": {
+        "operationId": "presets_api_presets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PresetDTO"
+                  },
+                  "title": "Response Presets Api Presets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Presets",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/preview/glb": {
+      "post": {
+        "description": "The coin as GLB with three PBR materials. ``ETag`` is the full config hash.",
+        "operationId": "preview_glb_api_preview_glb_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewGlbBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "model/gltf-binary": {}
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Preview Glb",
+        "tags": [
+          "coin"
+        ]
+      }
+    },
+    "/api/preview/svg": {
+      "post": {
+        "description": "The authoritative 2D render of one face.",
+        "operationId": "preview_svg_api_preview_svg_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewSvgBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "image/svg+xml": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Preview Svg",
+        "tags": [
+          "coin"
+        ]
+      }
+    },
+    "/api/schema/coin-config": {
+      "get": {
+        "description": "JSON Schema of the current ``CoinConfig`` version.",
+        "operationId": "coin_config_schema_api_schema_coin_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Coin Config Schema",
+        "tags": [
+          "coin"
+        ]
+      }
+    },
+    "/api/templates": {
+      "get": {
+        "operationId": "templates_api_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateDTO"
+                  },
+                  "title": "Response Templates Api Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Templates",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/validate": {
+      "post": {
+        "description": "Check a design. Returns the normalised config and printability warnings.",
+        "operationId": "validate_api_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Validate",
+        "tags": [
+          "coin"
+        ]
+      }
+    }
+  }
+}

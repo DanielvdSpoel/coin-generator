@@ -98,3 +98,54 @@ def test_unknown_filament_and_font_are_rejected(service: ValidationService) -> N
         service.validate(config_with(**{"colors.relief": {"filament": "nope"}}))
     with pytest.raises(InvalidConfig, match="unknown font key"):
         service.validate(config_with(**{"font": {"key": "comic-sans"}}))
+
+
+def test_text_overlap(service: ValidationService) -> None:
+    long = "W" * 40
+    config = config_with(
+        **{
+            "faces.front.top_text.text": long,
+            "faces.front.bottom_text.text": long,
+            "faces.front.top_text.size": 40,
+            "faces.front.bottom_text.size": 40,
+        }
+    )
+    warnings = [w for w in service.validate(config) if w.code == "text_overlap"]
+    assert [w.path for w in warnings] == ["faces.front.top_text.text"]
+    assert "text_overlap" not in _codes(service.validate(config_with()))
+
+
+def _icon(shape, **placement) -> dict:
+    from src.core.engine.icons import geometry_to_config
+
+    geometry = geometry_to_config(shape).model_dump(mode="json", exclude_none=True)
+    return {"geometry": geometry, "fit": 0.8, "dx": 0, "dy": 0, "rot": 0, **placement}
+
+
+def test_icon_overlap(service: ValidationService) -> None:
+    from tests.support.shapes import star
+
+    inside = config_with(**{"faces.front.icon": _icon(star(), fit=0.9)})
+    assert "icon_overlap" not in _codes(service.validate(inside))
+    pushed = config_with(**{"faces.front.icon": _icon(star(), fit=0.9, dx=20)})
+    warnings = [w for w in service.validate(pushed) if w.code == "icon_overlap"]
+    assert [w.path for w in warnings] == ["faces.front.icon.fit"]
+
+
+def test_icon_thin_feature_and_tiny_part(service: ValidationService) -> None:
+    from shapely.geometry import box
+    from shapely.ops import unary_union
+
+    hairline = unary_union([box(-100, -1, 100, 1), box(-3, 50, 3, 56)])
+    config = config_with(**{"faces.front.icon": _icon(hairline, fit=0.5)})
+    codes = _codes(service.validate(config))
+    assert "icon_thin_feature" in codes and "icon_tiny_part" in codes
+
+
+def test_filament_unknown_is_replaced_by_a_hex_on_check(service: ValidationService) -> None:
+    config = config_with(**{"faces.back.inlay": {"filament": "fc-gone"}})
+    normalised, warnings = service.check(config)
+    assert normalised.faces.back.inlay.hex == "#808080"
+    assert [(w.code, w.severity, w.path) for w in warnings] == [
+        ("filament_unknown", "info", "faces.back.inlay")
+    ]

@@ -63,6 +63,20 @@ jobs:
       - run: npx vitest --run
       - run: npm run build-only
 
+  types-drift:
+    name: Contract · OpenAPI → TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v6
+        with: { enable-cache: true, cache-dependency-glob: backend/uv.lock }
+      - uses: actions/setup-node@v6
+        with: { node-version: 24 }
+      - run: cd backend && uv sync --frozen
+      - run: make types
+      - name: Fail when the committed schema or types are stale
+        run: git diff --exit-code -- backend/openapi.json frontend/src/types/api.d.ts
+
   helm-lint:
     name: Deploy · helm lint
     runs-on: ubuntu-latest

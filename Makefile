@@ -5,7 +5,7 @@
 #   make lint       ruff + eslint/oxlint/prettier + vue-tsc
 #   make helm-lint  lint and render both Helm umbrella charts
 #   make images     build both container images locally
-#   make types      OpenAPI → frontend/src/types/api.d.ts   (wired in phase 2)
+#   make types      OpenAPI → backend/openapi.json + frontend/src/types/api.d.ts
 #   make coin ARGS="build default out.stl"   run the engine CLI
 #   make filaments-snapshot   refresh backend/data/filaments.snapshot.json
 #
@@ -71,8 +71,9 @@ images: ## Build both container images locally
 	docker build -t coin-generator-backend:dev backend
 	docker build -t coin-generator-frontend:dev frontend
 
-types: ## Generate frontend/src/types/api.d.ts from the backend OpenAPI schema (phase 2)
-	@echo "wired in phase 2: uv run python -m src.cli openapi | npx openapi-typescript"
+types: ## Regenerate backend/openapi.json and frontend/src/types/api.d.ts from the app
+	cd backend && $(UV) run python -m src.cli openapi > openapi.json
+	cd frontend && npx --yes openapi-typescript@7.13.0 ../backend/openapi.json -o src/types/api.d.ts
 
 coin: ## Engine CLI, e.g. make coin ARGS="build default out.stl" (paths relative to backend/)
 	cd backend && $(UV) run python -m src.cli $(ARGS)
