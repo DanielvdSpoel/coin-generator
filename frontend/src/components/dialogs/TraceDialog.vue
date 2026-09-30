@@ -38,6 +38,8 @@ const sourceUrl = ref('')
 let timer: ReturnType<typeof setTimeout> | undefined
 let seq = 0
 let controller: AbortController | null = null
+/** Options of the last trace request; resetting them on open must not trace twice. */
+let lastRequested = ''
 
 const effective = computed<TraceOptions>(() => ({
   ...options.value,
@@ -60,6 +62,7 @@ async function trace(): Promise<void> {
   const file = props.file
   if (!file) return
   const my = ++seq
+  lastRequested = JSON.stringify(effective.value)
   controller?.abort()
   controller = new AbortController()
   busy.value = true
@@ -103,7 +106,9 @@ watch(
   },
   { immediate: true },
 )
-watch(effective, () => props.open && props.file && schedule())
+watch(effective, (value) => {
+  if (props.open && props.file && JSON.stringify(value) !== lastRequested) schedule()
+})
 onBeforeUnmount(() => {
   clearTimeout(timer)
   controller?.abort()

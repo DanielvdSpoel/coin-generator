@@ -31,15 +31,8 @@ test('upload, trace and drag an emblem', async ({ page }) => {
   await expect(trace).toBeVisible()
   const use = trace.getByRole('button', { name: /use this icon/i })
   await expect(use).toBeEnabled({ timeout: 20_000 })
-  // Known bug: opening the dialog traces twice (immediately, and again 250 ms
-  // later because resetting the options trips the debounced watcher), so
-  // "Use this icon" briefly disables again right after the first result and a
-  // click can land on the disabled button. Retry the click until it takes;
-  // drop the retry once TraceDialog traces only once per open.
-  await expect(async () => {
-    await use.click({ timeout: 2_000 })
-    await expect(trace).toBeHidden({ timeout: 1_000 })
-  }).toPass({ timeout: 15_000 })
+  await use.click()
+  await expect(trace).toBeHidden()
   await expect(page.getByText('star.png')).toBeVisible()
 
   const across = page.getByRole('spinbutton', { name: /^across$/i })

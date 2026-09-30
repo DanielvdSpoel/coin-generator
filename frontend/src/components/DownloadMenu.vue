@@ -101,9 +101,11 @@ async function download(item: Item): Promise<void> {
     const reason =
       code === 'build_timeout'
         ? t('download.timeout')
-        : code === 'not_watertight'
-          ? t('download.notWatertight')
-          : String((cause as Error).message ?? cause)
+        : code === 'rate_limited'
+          ? t('download.oneAtATime')
+          : code === 'not_watertight'
+            ? t('download.notWatertight')
+            : String((cause as Error).message ?? cause)
     ui.showToast(
       t('download.failed', { reason }),
       { label: 'Retry', run: () => void download(item) },

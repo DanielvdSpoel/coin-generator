@@ -27,7 +27,8 @@ const attach = ref(true)
 const honeypot = ref('')
 const state = ref<'form' | 'sending' | 'sent'>('form')
 const error = ref('')
-const startedAt = ref(0)
+/** `performance.now()` at open: a duration is immune to the visitor's clock being off. */
+const openedAt = ref(0)
 const fileName = computed(() => fileNameFor(coin.config))
 const issues = computed(() => ui.visibleWarnings.filter((w) => w.severity !== 'info').length)
 
@@ -37,7 +38,7 @@ watch(
     if (open) {
       state.value = 'form'
       error.value = ''
-      startedAt.value = Date.now() / 1000
+      openedAt.value = performance.now()
     }
   },
 )
@@ -56,7 +57,7 @@ async function send(): Promise<void> {
       attach_design: attach.value,
       config: attach.value ? coin.config : null,
       honeypot: honeypot.value,
-      started_at: startedAt.value,
+      elapsed_s: (performance.now() - openedAt.value) / 1000,
     })
     state.value = 'sent'
   } catch (cause) {

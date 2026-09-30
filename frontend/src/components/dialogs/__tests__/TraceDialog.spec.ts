@@ -112,6 +112,25 @@ describe('TraceDialog', () => {
     wrapper.unmount()
   })
 
+  it('traces once when reopened, even though opening resets the options', async () => {
+    const { wrapper } = mountDialog()
+    await flush()
+    const range = wrapper.find(`input[type="range"][aria-label="${en.trace.threshold}"]`)
+    await range.setValue('200')
+    await vi.advanceTimersByTimeAsync(500)
+    await flush()
+    traced.mockClear()
+
+    await wrapper.setProps({ open: false })
+    await wrapper.setProps({ open: true })
+    await flush()
+    await vi.advanceTimersByTimeAsync(500)
+    await flush()
+    expect(traced).toHaveBeenCalledTimes(1)
+    expect(traced.mock.calls[0]?.[1]).toMatchObject({ threshold: 128 })
+    wrapper.unmount()
+  })
+
   it('collapses rapid changes into one trace', async () => {
     const { wrapper } = mountDialog()
     await flush()

@@ -53,7 +53,8 @@
     "anyway": "Download {format} anyway",
     "cancel": "Back to file types",
     "last": "Last: {file}",
-    "noPrinter": "Don't have a printer?"
+    "noPrinter": "Don't have a printer?",
+    "oneAtATime": "another download is still being prepared. Wait for it, then try again."
   },
   "tabs": {
     "front": "Front",

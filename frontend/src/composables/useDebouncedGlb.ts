@@ -64,7 +64,8 @@ export function useDebouncedGlb(config: Ref<CoinConfig>, options: DebouncedGlbOp
     } catch (cause) {
       if (mine !== seq || (cause instanceof DOMException && cause.name === 'AbortError')) return
       const status = cause instanceof ApiError ? cause.response.status : 0
-      if (status === 503 && attempt < BACKOFF_MS.length) {
+      // 503: the server is busy; 429: this browser still has builds in flight. Both pass.
+      if ((status === 503 || status === 429) && attempt < BACKOFF_MS.length) {
         const wait = BACKOFF_MS[attempt++] as number
         schedule(wait, true)
         return
@@ -104,7 +105,7 @@ export function useDebouncedGlb(config: Ref<CoinConfig>, options: DebouncedGlbOp
 }
 
 function describe(cause: unknown, status: number): string {
-  if (status === 503) return 'busy'
+  if (status === 503 || status === 429) return 'busy'
   if (status === 500) return 'not_watertight'
   if (status === 422) return 'invalid'
   if (cause instanceof ApiError) return `http_${status}`

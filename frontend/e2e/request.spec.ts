@@ -4,7 +4,7 @@ import { startFrom } from './helpers'
 
 // backend settings.contact_min_seconds: a form sent sooner is treated as a bot.
 const MIN_FILL_SECONDS = 3
-const CLOCK_MARGIN_SECONDS = 3
+const CLOCK_MARGIN_SECONDS = 0.5
 
 test('request a print sends the form and the design', async ({ page }) => {
   await startFrom(page)
@@ -17,13 +17,12 @@ test('request a print sends the form and the design', async ({ page }) => {
   await dialog.getByRole('textbox', { name: /message/i }).fill('Two coins, please.')
   await expect(dialog.getByRole('checkbox', { name: /attach this design/i })).toBeChecked()
 
-  // The form stamps `started_at` with the browser's Date.now() and the server
-  // compares it with its own wall clock. Wait on the page's clock with a wide
-  // margin: under load the WSL2 wall clock was seen stepping back by up to ~2 s,
-  // which made a 3.5 s wait look like 1.8 s to the server.
-  const openedAt = await page.evaluate(() => Date.now())
+  // The form sends `elapsed_s` from performance.now(), a monotonic clock, so
+  // wall-clock jumps (seen on WSL2 under load) cannot shorten it. Wait on the
+  // page's monotonic clock with a small margin.
+  const openedAt = await page.evaluate(() => performance.now())
   await page.waitForFunction(
-    (deadline) => Date.now() > deadline,
+    (deadline) => performance.now() > deadline,
     openedAt + (MIN_FILL_SECONDS + CLOCK_MARGIN_SECONDS) * 1000,
     { polling: 100 },
   )
@@ -43,7 +42,7 @@ test('request a print sends the form and the design', async ({ page }) => {
     honeypot: '',
     config: { meta: { name: 'Fancy example' } },
   })
-  expect(typeof body.started_at).toBe('number')
+  expect(body.elapsed_s).toBeGreaterThanOrEqual(MIN_FILL_SECONDS)
   expect((await answered).status()).toBe(202)
 
   await expect(dialog.getByText(/sent to daniel/i)).toBeVisible()

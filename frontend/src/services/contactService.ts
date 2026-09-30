@@ -8,7 +8,8 @@ export interface ContactRequest {
   attach_design: boolean
   config: CoinConfig | null
   honeypot: string
-  started_at: number
+  /** Seconds the form was open (the server rejects anything under its minimum). */
+  elapsed_s: number
 }
 
 export function sendContact(body: ContactRequest): Promise<unknown> {
