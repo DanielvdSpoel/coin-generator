@@ -69,11 +69,11 @@ Accounts or server-side template storage (D1).
 - [x] Privacy line in the dialog: details are used only to reply about this coin.
 
 ### 7.5 End-to-end tests
-- [ ] Playwright against `compose` (or the PR preview URL in CI): load template,
+- [x] Playwright against `compose` (or the PR preview URL in CI): load template,
       edit text, upload icon fixture, drag it, export STL, export JSON, reload,
       import JSON, assert the config hash equals the exported one; submit the
       contact dialog against the logging mailer and assert the request body.
-- [ ] Visual regression on the SVG preview for golden configs (Playwright
+- [x] Visual regression on the SVG preview for golden configs (Playwright
       screenshots with a small threshold).
 
 ## Acceptance criteria
@@ -130,5 +130,11 @@ Accounts or server-side template storage (D1).
   `lang="en"` (accessibility 96 → 100).
 - **`coin bench`** (best of 3, this machine), preview / export total:
   default 316 / 623 ms, fancy 254 / 338 ms, simple 143 / 194 ms.
+- **E2E:** `make e2e` (Playwright, Chromium) starts both apps without Docker
+  and covers templates, text, icon upload and drag, STL/3MF/JSON downloads with
+  a save → reload → open round trip, the contact request body, and a visual
+  baseline of the front face (Linux/Chromium). It runs as a CI job. It found
+  two bugs, both fixed: the trace dialog traced twice per open, and the contact
+  form compared the browser's clock with the server's.
 - **Open:** the back field bridges one relief height above the bed (found in
   phase 6). That is a geometry or print-orientation decision, not UI.
