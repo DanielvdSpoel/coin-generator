@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.api.catalog.router import router as catalog_router
 from src.api.coin.router import router as coin_router
@@ -51,7 +52,23 @@ def create_app(container: Container | None = None, warm: bool | None = None) -> 
     register_exception_handlers(app)
     for router in (health_router, coin_router, catalog_router, icons_router, contact_router):
         app.include_router(router)
+    _instrument(app, container)
     return app
+
+
+def _instrument(app: FastAPI, container: Container) -> None:
+    """HTTP metrics plus the build pipeline's, on ``/metrics``.
+
+    Not under ``/api``, so the Ingress (which routes ``/api`` to this service and
+    everything else to the SPA) never exposes it; Prometheus scrapes the pod.
+    """
+    registry = container.metrics().registry
+    Instrumentator(
+        excluded_handlers=["/metrics", "/api/health", "/api/healthz"],
+        registry=registry,
+    ).instrument(app, latency_lowr_buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30)).expose(
+        app, include_in_schema=False, should_gzip=True
+    )
 
 
 def configure_middleware(app: FastAPI, container: Container) -> None:

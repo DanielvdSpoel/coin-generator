@@ -392,6 +392,11 @@ export interface components {
             attach_design: boolean;
             config?: components["schemas"]["CoinConfig"] | null;
             /**
+             * Elapsed S
+             * @description Seconds the form was open, measured by the browser. A duration, not a timestamp, so a visitor's clock being off does not matter.
+             */
+            elapsed_s: number;
+            /**
              * Email
              * Format: email
              */
@@ -408,11 +413,6 @@ export interface components {
             message: string;
             /** Name */
             name: string;
-            /**
-             * Started At
-             * @description Unix seconds when the form was opened
-             */
-            started_at: number;
         };
         /**
          * CustomFont
@@ -1038,6 +1038,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Internal Server Error */
             500: {
                 headers: {
@@ -1299,6 +1308,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     presets_api_presets_get: {
@@ -1352,6 +1370,15 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1456,6 +1483,15 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

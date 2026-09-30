@@ -15,6 +15,7 @@ from src.adapters.filamentcolors_source import FilamentColorsSource, SnapshotFil
 from src.adapters.fonttools_font_parser import FontToolsFontParser
 from src.adapters.lru_mesh_cache import LruMeshCache
 from src.adapters.memory_filament_registry import MemoryFilamentRegistry, load_overrides
+from src.adapters.prometheus_metrics import PrometheusMetrics
 from src.adapters.smtp_mailer import LoggingMailer, SmtpMailer
 from src.core.interfaces.filament_registry import FilamentRegistry
 from src.core.interfaces.font_parser import FontParser
@@ -28,6 +29,7 @@ from src.core.services.contact_service import ContactService, ContactSettings
 from src.core.services.font_service import FontService
 from src.core.services.icon_service import IconService
 from src.core.services.validation_service import ValidationService
+from src.core.tools.client_limit import ClientConcurrencyLimiter
 from src.core.tools.rate_limit import SlidingWindowLimiter
 from src.settings import Settings, get_settings
 
@@ -69,8 +71,21 @@ class Container:
         return LruMeshCache(self.settings.cache_size_mb * 1024 * 1024)
 
     @cached_property
+    def _metrics(self) -> PrometheusMetrics:
+        return PrometheusMetrics()
+
+    @cached_property
     def _build_executor(self) -> BuildExecutor:
-        return BuildExecutor(self.settings.build_workers, self.settings.build_timeout_s)
+        return BuildExecutor(
+            self.settings.build_workers, self.settings.build_timeout_s, self._metrics
+        )
+
+    @cached_property
+    def _client_limiter(self) -> ClientConcurrencyLimiter:
+        s = self.settings
+        return ClientConcurrencyLimiter(
+            {"export": s.client_max_exports, "preview": s.client_max_previews}, self._metrics
+        )
 
     @cached_property
     def _mailer(self) -> Mailer:
@@ -121,6 +136,12 @@ class Container:
     def build_executor(self) -> BuildExecutor:
         return self._build_executor
 
+    def metrics(self) -> PrometheusMetrics:
+        return self._metrics
+
+    def client_limiter(self) -> ClientConcurrencyLimiter:
+        return self._client_limiter
+
     def mailer(self) -> Mailer:
         return self._mailer
 
@@ -139,6 +160,7 @@ class Container:
             self.mesh_cache(),
             self.build_executor(),
             self.validation_service(),
+            self._metrics,
         )
 
     def catalog_service(self) -> CatalogService:
@@ -149,7 +171,10 @@ class Container:
 
     def icon_service(self) -> IconService:
         return IconService(
-            self.rasteriser(), self.settings.max_upload_bytes, self.settings.max_icon_vertices
+            self.rasteriser(),
+            self.settings.max_upload_bytes,
+            self.settings.max_icon_vertices,
+            self._metrics,
         )
 
     def contact_service(self) -> ContactService:

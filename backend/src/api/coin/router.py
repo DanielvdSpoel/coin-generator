@@ -7,7 +7,7 @@ Domain exceptions are translated in ``api/errors.py``.
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 
-from src.api.deps import get_container_from_request
+from src.api.deps import client_ip, get_container_from_request
 from src.api.schemas import (
     ConfigBody,
     ErrorResponse,
@@ -20,11 +20,13 @@ from src.api.schemas import (
     ValidateResponse,
     WarningDTO,
 )
+from src.core.tools.hashing import full_hash
 
 router = APIRouter(prefix="/api", tags=["coin"])
 
 _ERRORS = {
     422: {"model": ErrorResponse},
+    429: {"model": ErrorResponse},
     500: {"model": ErrorResponse},
     503: {"model": ErrorResponse},
 }
@@ -63,8 +65,11 @@ def preview_svg(body: PreviewSvgBody, request: Request) -> Response:
 )
 def preview_glb(body: PreviewGlbBody, request: Request) -> Response:
     """The coin as GLB with three PBR materials. ``ETag`` is the full config hash."""
-    service = get_container_from_request(request).coin_service()
-    result = service.build_glb(body.config, body.quality)
+    container = get_container_from_request(request)
+    with container.client_limiter().slot(client_ip(request), "preview"):
+        result = container.coin_service().build_glb(body.config, body.quality)
+    request.state.config_hash = result.etag
+    request.state.cache = "hit" if result.cached else "miss"
     etag = f'"{result.etag}"'
     if request.headers.get("if-none-match") == etag:
         return Response(status_code=304, headers={"ETag": etag})
@@ -78,7 +83,9 @@ def preview_glb(body: PreviewGlbBody, request: Request) -> Response:
 @router.post("/stats", response_model=StatsResponse, responses=_ERRORS)
 def stats(body: ConfigBody, request: Request) -> StatsResponse:
     """Size, filament grams per material and the filament swap heights."""
-    result = get_container_from_request(request).coin_service().stats(body.config)
+    container = get_container_from_request(request)
+    with container.client_limiter().slot(client_ip(request), "preview"):
+        result = container.coin_service().stats(body.config)
     return StatsResponse(
         diameter_mm=result.diameter_mm,
         thickness_mm=result.thickness_mm,
@@ -95,8 +102,10 @@ def stats(body: ConfigBody, request: Request) -> StatsResponse:
 )
 def export(body: ExportBody, request: Request) -> Response:
     """Full-quality print file. Warnings ride along in ``X-Coin-Warnings``."""
-    service = get_container_from_request(request).coin_service()
-    result = service.export(body.config, body.format)
+    container = get_container_from_request(request)
+    with container.client_limiter().slot(client_ip(request), "export"):
+        result = container.coin_service().export(body.config, body.format)
+    request.state.config_hash = full_hash(body.config)
     headers = {
         "Content-Disposition": f'attachment; filename="{result.filename}"',
         "X-Coin-Warnings": ",".join(sorted({w.code for w in result.warnings})),

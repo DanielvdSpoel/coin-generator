@@ -1,7 +1,6 @@
 """The "don't have a printer?" flow (decision D19): one email, nothing stored."""
 
 import json
-import time
 from dataclasses import dataclass
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -28,7 +27,11 @@ class ContactRequest(BaseModel):
     attach_design: bool = False
     config: CoinConfig | None = None
     honeypot: str = ""
-    started_at: float = Field(description="Unix seconds when the form was opened")
+    elapsed_s: float = Field(
+        ge=0,
+        description="Seconds the form was open, measured by the browser. A duration, "
+        "not a timestamp, so a visitor's clock being off does not matter.",
+    )
 
 
 @dataclass(frozen=True)
@@ -54,25 +57,22 @@ class ContactService:
         self._validation = validation
         self._limiter = limiter
 
-    def send(
-        self, request: ContactRequest, client: str = "unknown", now: float | None = None
-    ) -> None:
+    def send(self, request: ContactRequest, client: str = "unknown") -> None:
         """Check the anti-spam rules and send.
 
         Raises ``InvalidConfig`` for bots and ``RateLimited`` when ``client`` sent
         too many requests. An attached design is validated, and its printability
         warnings go into the email so problems show up before printing.
         """
-        now = time.time() if now is None else now
         if request.honeypot:
             raise InvalidConfig(
                 "request rejected",
                 [{"loc": ["honeypot"], "msg": "must be empty", "code": "spam"}],
             )
-        if now - request.started_at < self._settings.min_seconds:
+        if request.elapsed_s < self._settings.min_seconds:
             raise InvalidConfig(
                 "request rejected",
-                [{"loc": ["started_at"], "msg": "form submitted too quickly", "code": "spam"}],
+                [{"loc": ["elapsed_s"], "msg": "form submitted too quickly", "code": "spam"}],
             )
         if request.attach_design and request.config is None:
             raise InvalidConfig(

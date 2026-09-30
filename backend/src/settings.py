@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     contact_rate_limit: int = 3
     """Contact requests per client IP per ``contact_rate_window_s``, per pod."""
     contact_rate_window_s: float = 600.0
+    # Concurrent requests per client IP (per pod). Previews cover GLB, stats and
+    # icon traces; 3 leaves room for a request the browser already abandoned.
+    client_max_exports: int = 1
+    client_max_previews: int = 3
 
     # Data locations
     fonts_dir: Path = BACKEND_DIR / "fonts"

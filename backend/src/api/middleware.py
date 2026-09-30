@@ -59,7 +59,8 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         duration_ms = (time.perf_counter() - started) * 1e3
         response.headers["X-Request-ID"] = request_id
-        if not request.url.path.startswith("/api/health"):
+        path = request.url.path
+        if not (path.startswith("/api/health") or path == "/metrics"):
             logger.info(
                 "%s %s %s %.0fms",
                 request.method,
@@ -72,6 +73,12 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
                     "path": request.url.path,
                     "status": response.status_code,
                     "duration_ms": round(duration_ms, 1),
+                    # Set by the geometry handlers, so Loki can find every request for a design.
+                    **{
+                        key: value
+                        for key in ("config_hash", "cache")
+                        if (value := getattr(request.state, key, None)) is not None
+                    },
                 },
             )
         return response

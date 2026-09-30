@@ -3,8 +3,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
 
-from src.api.deps import get_container_from_request
+from src.api.deps import client_ip, get_container_from_request
 from src.api.schemas import ErrorResponse, TraceOptionsBody, TraceResponse
 from src.core.exceptions import InvalidConfig
 
@@ -14,7 +15,11 @@ router = APIRouter(prefix="/api", tags=["icons"])
 @router.post(
     "/icons/trace",
     response_model=TraceResponse,
-    responses={413: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+    responses={
+        413: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+        429: {"model": ErrorResponse},
+    },
 )
 async def trace(
     request: Request,
@@ -31,7 +36,10 @@ async def trace(
         ) from exc
     container = get_container_from_request(request)
     data = await file.read()
-    result = container.icon_service().trace(
-        data, file.filename or "upload", parsed, embed_source=parsed.embed_source
-    )
+    service = container.icon_service()
+    with container.client_limiter().slot(client_ip(request), "preview"):
+        # Tracing is CPU work: keep it off the event loop.
+        result = await run_in_threadpool(
+            service.trace, data, file.filename or "upload", parsed, parsed.embed_source
+        )
     return TraceResponse(**vars(result))

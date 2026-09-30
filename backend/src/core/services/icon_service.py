@@ -8,6 +8,7 @@ then goes through the same mask → trace → isolate pipeline
 import base64
 import hashlib
 import io
+import time
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -24,6 +25,7 @@ from src.core.engine.icons import (
     trace_mask,
 )
 from src.core.exceptions import IconTraceFailed, PayloadTooLarge
+from src.core.interfaces.metrics import Metrics, NullMetrics
 from src.core.interfaces.rasteriser import Rasteriser
 
 _MEDIA_TYPES = {"PNG": "image/png", "JPEG": "image/jpeg"}
@@ -68,10 +70,12 @@ class IconService:
         rasteriser: Rasteriser,
         max_upload_bytes: int,
         max_vertices: int = MAX_ICON_VERTICES,
+        metrics: Metrics | None = None,
     ) -> None:
         self._rasteriser = rasteriser
         self._max_bytes = max_upload_bytes
         self._max_vertices = max_vertices
+        self._metrics = metrics or NullMetrics()
 
     def _load(self, data: bytes, filename: str) -> tuple[Image.Image, str]:
         """The upload as an RGBA image no larger than ``TRACE_SIZE_PX``, and its media type."""
@@ -90,6 +94,15 @@ class IconService:
 
     def trace(
         self, data: bytes, filename: str, options: TraceOptions, embed_source: bool = False
+    ) -> TraceResult:
+        started = time.perf_counter()
+        try:
+            return self._trace(data, filename, options, embed_source)
+        finally:
+            self._metrics.trace_finished(time.perf_counter() - started)
+
+    def _trace(
+        self, data: bytes, filename: str, options: TraceOptions, embed_source: bool
     ) -> TraceResult:
         if len(data) > self._max_bytes:
             raise PayloadTooLarge(f"image is larger than {self._max_bytes // (1024 * 1024)} MB")

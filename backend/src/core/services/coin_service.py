@@ -25,6 +25,7 @@ from src.core.exceptions import BuildTimeout
 from src.core.interfaces.filament_registry import FilamentRegistry
 from src.core.interfaces.font_registry import FontRegistry
 from src.core.interfaces.mesh_cache import MeshCache
+from src.core.interfaces.metrics import Metrics, NullMetrics
 from src.core.services.colors import resolve_colors
 from src.core.services.validation_service import ValidationService, ValidationWarning
 from src.core.tools.hashing import full_hash, geometry_hash
@@ -49,15 +50,19 @@ class BuildExecutor:
     worker is not killed, the caller just stops waiting.
     """
 
-    def __init__(self, workers: int, timeout_s: float) -> None:
+    def __init__(self, workers: int, timeout_s: float, metrics: Metrics | None = None) -> None:
         self._pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="build")
         self._timeout = timeout_s
+        self._metrics = metrics or NullMetrics()
 
     def run(self, fn: Callable[[], T]) -> T:
+        self._metrics.builds_in_flight(1)
         future: Future[T] = self._pool.submit(fn)
+        future.add_done_callback(lambda _: self._metrics.builds_in_flight(-1))
         try:
             return future.result(timeout=self._timeout)
         except FutureTimeout as exc:
+            self._metrics.build_timed_out()
             raise BuildTimeout(f"build took longer than {self._timeout:g} s") from exc
 
     def shutdown(self) -> None:
@@ -99,12 +104,14 @@ class CoinService:
         cache: MeshCache,
         executor: BuildExecutor,
         validation: ValidationService,
+        metrics: Metrics | None = None,
     ) -> None:
         self._fonts = fonts
         self._filaments = filaments
         self._cache = cache
         self._executor = executor
         self._validation = validation
+        self._metrics = metrics or NullMetrics()
 
     def validate(self, config: CoinConfig) -> ValidationResult:
         config, warnings = self._validation.check(config)
@@ -114,12 +121,14 @@ class CoinService:
         """The fused mesh, from the cache when the geometry was built before."""
         key = f"mesh:{quality.name}:{geometry_hash(config)}"
         cached = self._cache.get(key)
+        self._metrics.cache_lookup("mesh", cached is not None)
         if cached is not None:
             logger.debug("mesh cache hit %s", key)
             return cached
         glyphs = self._fonts.glyphs(config.font)
         started = time.perf_counter()
         built = self._executor.run(lambda: build_coin(config, glyphs, quality))
+        self._metrics.build_finished(quality.name, time.perf_counter() - started)
         logger.info(
             "built %s in %.0f ms (2d %.0f, extrude %.0f, union %.0f), %d faces",
             quality.name,
@@ -136,6 +145,7 @@ class CoinService:
         etag = f"{full_hash(config)}-{quality}"
         key = f"glb:{etag}"
         cached = self._cache.get(key)
+        self._metrics.cache_lookup("glb", cached is not None)
         if cached is not None:
             return GlbResult(cached, etag, cached=True)
         colors = resolve_colors(config, self._filaments)

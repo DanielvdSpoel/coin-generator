@@ -322,7 +322,7 @@ def _contact(**overrides) -> dict:
         "message": "One coin please",
         "attach_design": False,
         "honeypot": "",
-        "started_at": time.time() - 10,
+        "elapsed_s": 10,
         **overrides,
     }
 
@@ -358,7 +358,7 @@ def test_contact_rejects_bots(api: TestClient) -> None:
     honeypot = api.post("/api/contact", json=_contact(honeypot="http://spam"))
     assert honeypot.status_code == 422
     assert honeypot.json()["detail"][0]["loc"] == ["honeypot"]
-    fast = api.post("/api/contact", json=_contact(started_at=time.time()))
+    fast = api.post("/api/contact", json=_contact(elapsed_s=1.2))
     assert fast.status_code == 422
     assert fast.json()["detail"][0]["code"] == "spam"
     missing = api.post("/api/contact", json=_contact(attach_design=True))
@@ -378,6 +378,36 @@ def test_contact_is_rate_limited_per_client(api: TestClient, engine_container) -
     assert blocked.json()["detail"][0]["code"] == "rate_limited"
     assert int(blocked.headers["retry-after"]) > 0
     assert api.post("/api/contact", json=_contact(), headers=_from("10.9.9.10")).status_code == 202
+
+
+def test_metrics_report_builds_and_cache(api: TestClient) -> None:
+    body = _body(config_with(**{"meta.name": "Metrics"}))
+    api.post("/api/preview/glb", json=body)
+    api.post("/api/preview/glb", json=body)
+    text = api.get("/metrics").text
+    assert 'coin_cache_lookups_total{kind="glb",result="hit"}' in text
+    assert 'coin_build_seconds_count{quality="preview"}' in text
+    assert "http_requests_total" in text
+    assert api.get("/api/metrics").status_code == 404
+
+
+def test_access_log_carries_the_config_hash(api: TestClient, caplog) -> None:
+    caplog.set_level("INFO", logger="coin.access")
+    response = api.post("/api/preview/glb", json=_body(config_with()))
+    line = next(r for r in caplog.records if r.getMessage().startswith("POST /api/preview/glb"))
+    assert f'"{line.config_hash}"' == response.headers["etag"]
+    assert line.cache in {"hit", "miss"}
+
+
+def test_one_export_at_a_time_per_client(api: TestClient, engine_container) -> None:
+    # Own geometry: other tests leave a deliberately leaky default mesh in the cache.
+    body = {**_body(config_with(**{"size.diameter_mm": 44})), "format": "stl"}
+    limiter = engine_container.client_limiter()
+    with limiter.slot("10.7.7.7", "export"):
+        busy = api.post("/api/export", json=body, headers=_from("10.7.7.7"))
+        assert busy.status_code == 429 and busy.json()["detail"][0]["code"] == "rate_limited"
+        other = api.post("/api/export", json=body, headers=_from("10.7.7.8"))
+        assert other.status_code == 200
 
 
 def _from(ip: str) -> dict[str, str]:
