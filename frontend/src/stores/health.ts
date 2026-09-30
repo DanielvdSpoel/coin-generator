@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import { getHealth, type HealthResponse } from '@/services/healthService'
 
@@ -25,5 +25,7 @@ export const useHealthStore = defineStore('health', () => {
     }
   }
 
-  return { health, isLoading, error, refresh }
+  const isOnline = computed(() => health.value?.status === 'ok')
+
+  return { health, isLoading, error, isOnline, refresh }
 })

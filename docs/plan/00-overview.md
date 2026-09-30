@@ -60,6 +60,7 @@ departs from the source docs and why.
 | D17 | **Public, English-only UI.** Strings go through i18n so Dutch can follow. Phase 8 adds rate limits and per-IP build caps. | Answered 2026-09-28. |
 | D19 | **"Don't have a printer?" contact flow.** A dialog collects contact details, an optional message and, when ticked, attaches the current design JSON; the backend sends one email to Daniel via SMTP. No order storage. | Confirmed in the Impeccable init interview 2026-09-28. The only outbound action the backend performs; needs an SMTP sealed secret and anti-spam (rate limit, honeypot, minimum fill time). |
 | D18 | **Users can upload their own font** (TTF/OTF/WOFF/WOFF2, ≤ 2 MB). The font bytes are embedded in the config (base64) so templates stay self-contained; the server parses fonts from bytes with fontTools, caches by hash, and never stores them. Built-in fonts stay as keys. | Same portability rule as icons (D2). The user is responsible for font licensing; the tool does not redistribute anything, the config stays with them. |
+| D20 | **The designer follows the two-pane Claude Design layout** (settings left, one face or the 3D view right, gallery and request as dialogs), not the earlier side-by-side plate mockup in `design/mockups/`. | The user rebuilt the design that way on 2026-09-29 (`design/claude-design/`); the brief's open decisions are settled in `phase-3-frontend-2d.md`. |
 
 ## Phase map
 

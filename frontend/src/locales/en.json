@@ -1,0 +1,226 @@
+{
+  "app": {
+    "title": "Coin Designer",
+    "by": "by Daniel van der Spoel",
+    "designName": "Design name"
+  },
+  "header": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "templates": "Templates",
+    "open": "Open file",
+    "save": "Save file",
+    "download": "Download",
+    "preparing": "Preparing {format}…",
+    "request": "Request a print",
+    "offline": "Backend unreachable: the preview works, downloads and requests do not.",
+    "warnBadge": "Things to check before printing"
+  },
+  "download": {
+    "ready": "Ready to print",
+    "check": "Check {n} thing before printing | Check {n} things before printing",
+    "nothing": "✓ Nothing to fix for a {nozzle} nozzle. Pick a file type below.",
+    "keep": "Keep as is",
+    "goTo": "Show me",
+    "threeMf": "3MF · two colours",
+    "threeMfDesc": "Metal and enamel as separate parts in one file. Best for multi-material printers.",
+    "stlPair": "STL pair",
+    "stlPairDesc": "Body and enamel as two files, for any slicer.",
+    "stl": "STL · one colour",
+    "stlDesc": "Geometry only. Swap filament at a layer for two tones.",
+    "failed": "Download failed: {reason}",
+    "timeout": "the server took too long. Try again in a moment.",
+    "notWatertight": "the coin could not be built as a solid. This is a bug; please report the design.",
+    "done": "Downloaded {file}.",
+    "copyJson": "Copy the design as JSON",
+    "copied": "Design JSON copied to the clipboard.",
+    "copyFailed": "The clipboard is not available here. Use Save file instead."
+  },
+  "tabs": {
+    "front": "Front",
+    "back": "Back",
+    "coin": "Whole coin",
+    "frontSub": "Face 1",
+    "backSub": "Face 2",
+    "coinSub": "Size, edge, metal",
+    "faceHint": "Texts, emblem and enamel of the {face} face only.",
+    "coinHint": "Size, edge, metal and lettering, shared by both faces.",
+    "frontTitle": "Front",
+    "backTitle": "Back",
+    "coinTitle": "Whole coin"
+  },
+  "preview": {
+    "frontLabel": "Front preview",
+    "backLabel": "Back preview",
+    "obverse": "Obverse",
+    "reverse": "Reverse",
+    "bothHint": "Both faces at the same scale. The 3D view arrives in phase 4.",
+    "iconHint": "Move, resize and rotate the emblem from the Emblem notes.",
+    "warningsOnFace": "{n} thing to check on this face | {n} things to check on this face"
+  },
+  "sections": {
+    "inscription": "Inscription",
+    "emblem": "Emblem",
+    "enamel": "Enamel colour",
+    "enamelSub": "the recessed field",
+    "size": "Size",
+    "edge": "Edge",
+    "metal": "Metal colour",
+    "metalSub": "rim, letters and emblem",
+    "lettering": "Lettering",
+    "printer": "Printer",
+    "advanced": "Advanced",
+    "advancedSub": "ring and text radii"
+  },
+  "inscription": {
+    "top": "Top text",
+    "bottom": "Bottom text",
+    "topPlaceholder": "e.g. NORTHERN ANALYSIS UNIT",
+    "bottomPlaceholder": "e.g. Est. 2021",
+    "letterSize": "Letter size",
+    "spacing": "Spacing",
+    "dots": "Separator dots between the two texts"
+  },
+  "emblem": {
+    "placeholder": "Placeholder mark",
+    "placeholderKind": "A compass rose until you upload a logo",
+    "uploaded": "Traced outline",
+    "uploadedKind": "{n} shape, {v} points | {n} shapes, {v} points",
+    "remove": "Remove",
+    "upload": "Upload a logo",
+    "uploadSoon": "Logo upload arrives in phase 5. Until then, start from a template or use the placeholder mark.",
+    "usePlaceholder": "Use the placeholder mark",
+    "size": "Size",
+    "rotate": "Rotate",
+    "offsetX": "Across",
+    "offsetY": "Up",
+    "recentre": "Re-centre"
+  },
+  "colour": {
+    "change": "Change",
+    "chooseEnamel": "Choose enamel filament",
+    "chooseMetal": "Choose metal filament",
+    "custom": "Or a custom colour · {hex}",
+    "copyFrom": "Copy emblem and enamel from the {face}",
+    "source": "Colours are colorimeter readings of printed samples from filamentcolors.xyz, not vendor charts.",
+    "unknown": "This filament is no longer in the list. Pick another."
+  },
+  "picker": {
+    "enamelTitle": "Enamel filament · {face}",
+    "metalTitle": "Metal filament",
+    "search": "Search brand, type or colour…",
+    "brand": "Brand",
+    "type": "Type",
+    "colours": "{type} · {n} colour | {type} · {n} colours",
+    "noMatch": "No filament matches. Try fewer words.",
+    "close": "Close",
+    "data": "Colour data: {site}",
+    "measured": "measured",
+    "override": "our measurement"
+  },
+  "size": {
+    "common": "Common sizes",
+    "diameter": "Diameter",
+    "thickness": "Thickness",
+    "relief": "Relief",
+    "hint": "Thickness is the body; relief is how far letters and emblem stand out on each face."
+  },
+  "edge": {
+    "reeded": "Reeded",
+    "reededSub": "Ridged, like a real coin",
+    "plain": "Plain",
+    "plainSub": "Smooth, easiest to print",
+    "teeth": "Teeth"
+  },
+  "lettering": {
+    "font": "Font",
+    "hint": "One font for the whole coin. TTF, OTF or WOFF, up to 2 MB.",
+    "upload": "Upload a font",
+    "uploadSoon": "Font upload arrives in phase 5.",
+    "custom": "{name} (uploaded)"
+  },
+  "printer": {
+    "nozzle": "Nozzle",
+    "hint": "Used only for the condition checks. Not sure? Leave it at 0.4 mm."
+  },
+  "advanced": {
+    "divider": "Inner divider ring",
+    "rim": "Rim",
+    "ringOuter": "Ring outer",
+    "ringInner": "Ring inner",
+    "topArc": "Top arc",
+    "bottomArc": "Bottom arc",
+    "reedDepth": "Reed depth",
+    "hint": "Design units: 320 across the coin. The tuned values come from printed coins; change them when you know why.",
+    "reset": "Reset to the tuned values"
+  },
+  "presets": {
+    "label": "Layout",
+    "custom": "Custom"
+  },
+  "templates": {
+    "title": "Start from a lot",
+    "intro": "Pick a template, then change the texts and colours. Everything stays editable.",
+    "lot": "Lot {n}",
+    "blank": "Blank coin",
+    "blankDesc": "Empty faces · fancy layout",
+    "close": "Close",
+    "openFile": "Have a .coin.json from earlier? {link}. Templates are anonymised examples.",
+    "openIt": "Open it",
+    "offline": "Templates come from the server, which is not reachable right now."
+  },
+  "request": {
+    "title": "Request a print",
+    "intro": "Daniel prints the coin for you and gets back to you by email about colours, quantity and price.",
+    "name": "Your name",
+    "email": "Email",
+    "message": "Message · optional",
+    "messagePlaceholder": "How many coins, and by when?",
+    "attach": "Attach this design ({file})",
+    "send": "Send request",
+    "sending": "Sending…",
+    "sent": "✓ Sent to Daniel{what}. He will reply to {email}. Nothing is stored on the server.",
+    "withFile": " with {file}",
+    "done": "Done",
+    "needName": "Add your name so Daniel knows who it is from.",
+    "needEmail": "That email address does not look complete.",
+    "tooFast": "Give it a few seconds, then send again.",
+    "failed": "The request could not be sent. Try again in a moment.",
+    "offline": "The server is not reachable right now, so the request cannot be sent."
+  },
+  "importError": {
+    "title": "That file could not be opened",
+    "close": "Close"
+  },
+  "toasts": {
+    "restored": "Restored your last design from this browser.",
+    "startFresh": "Start fresh",
+    "saved": "Saved {file}. Open it later to keep editing, or send it to someone.",
+    "opened": "Opened {file}.",
+    "openedUnchecked": "Opened {file}. The server is away, so it was not checked.",
+    "template": "Started from {name}.",
+    "reset": "Reset to a blank coin."
+  },
+  "warnings": {
+    "thin_stroke": "Letters",
+    "descender_collision": "Bottom text",
+    "text_overlap": "Texts",
+    "icon_overlap": "Emblem",
+    "icon_thin_feature": "Emblem",
+    "icon_tiny_part": "Emblem",
+    "teeth_too_fine": "Edge",
+    "body_thin": "Whole coin",
+    "missing_glyph": "Font",
+    "filament_unknown": "Colour",
+    "face": {
+      "front": "Front",
+      "back": "Back"
+    }
+  },
+  "units": {
+    "mm": "mm",
+    "pct": "%",
+    "deg": "°",
+    "u": "u"
+  }
+}
