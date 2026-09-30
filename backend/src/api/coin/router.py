@@ -73,11 +73,12 @@ def preview_glb(body: PreviewGlbBody, request: Request) -> Response:
     etag = f'"{result.etag}"'
     if request.headers.get("if-none-match") == etag:
         return Response(status_code=304, headers={"ETag": etag})
-    return Response(
-        content=result.data,
-        media_type="model/gltf-binary",
-        headers={"ETag": etag, "X-Cache": "hit" if result.cached else "miss"},
-    )
+    headers = {"ETag": etag, "X-Cache": request.state.cache, "Vary": "Accept-Encoding"}
+    if "gzip" in request.headers.get("accept-encoding", ""):
+        # Stored compressed; the GZip middleware leaves an encoded response alone.
+        headers["Content-Encoding"] = "gzip"
+        return Response(result.gzipped, media_type="model/gltf-binary", headers=headers)
+    return Response(result.data, media_type="model/gltf-binary", headers=headers)
 
 
 @router.post("/stats", response_model=StatsResponse, responses=_ERRORS)

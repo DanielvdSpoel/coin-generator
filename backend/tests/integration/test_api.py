@@ -425,3 +425,13 @@ def _from(ip: str) -> dict[str, str]:
 def test_docs_are_hidden_outside_dev(api: TestClient) -> None:
     assert api.get("/api/docs").status_code == 404
     assert api.get("/api/openapi.json").status_code == 200
+
+
+def test_glb_is_served_precompressed(api: TestClient) -> None:
+    body = _body(config_with(**{"meta.name": "Gzip"}))
+    zipped = api.post("/api/preview/glb", json=body, headers={"Accept-Encoding": "gzip"})
+    assert zipped.headers["content-encoding"] == "gzip"
+    assert zipped.content[:4] == b"glTF"  # the client decoded it
+    plain = api.post("/api/preview/glb", json=body, headers={"Accept-Encoding": "identity"})
+    assert "content-encoding" not in plain.headers
+    assert plain.content == zipped.content

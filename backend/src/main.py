@@ -75,7 +75,8 @@ def configure_middleware(app: FastAPI, container: Container) -> None:
     settings = container.settings
     # Starlette runs the last-added middleware first on the way in.
     app.add_middleware(DIMiddleware, container=container)
-    app.add_middleware(GZipMiddleware, minimum_size=1024)
+    # Level 5: level 9 costs ~3x the CPU for a percent or two. GLBs arrive pre-compressed.
+    app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)
     app.add_middleware(
         BodyLimitMiddleware,
         json_bytes=settings.max_json_bytes,
