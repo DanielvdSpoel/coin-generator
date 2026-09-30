@@ -114,19 +114,16 @@ export const useCatalogStore = defineStore('catalog', () => {
   const filamentById = computed(() => new Map(filaments.value.map((f) => [f.id, f])))
   const vendors = computed(() => [...new Set(filaments.value.map((f) => f.vendor))].sort())
 
+  /** Each list is applied as soon as it arrives, so the small ones do not wait on filaments. */
   async function load(): Promise<void> {
     error.value = null
     try {
-      const [f, fl, p, t] = await Promise.all([
-        getFonts(),
-        loadFilaments(),
-        getPresets(),
-        getTemplates(),
+      await Promise.all([
+        getFonts().then((f) => (fonts.value = f)),
+        loadFilaments().then((f) => (filaments.value = f)),
+        getPresets().then((p) => (presets.value = p)),
+        getTemplates().then((t) => (templates.value = t)),
       ])
-      fonts.value = f
-      filaments.value = fl
-      presets.value = p
-      templates.value = t
       loaded.value = true
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : String(cause)

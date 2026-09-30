@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 
 import DetailsGroup from '@/components/common/DetailsGroup.vue'
 import ColorField from '@/components/editor/ColorField.vue'
+import { defaultConfig } from '@/lib/defaults'
 import { useCoinStore } from '@/stores/coin'
 import type { ColorRef } from '@/types/coin'
 
@@ -14,7 +15,12 @@ function set(ref: ColorRef): void {
 </script>
 
 <template>
-  <DetailsGroup number="03" :title="t('sections.metal')" :sub="t('sections.metalSub')">
+  <DetailsGroup
+    number="03"
+    :title="t('sections.metal')"
+    :sub="t('sections.metalSub')"
+    :reset="() => coin.setField('colors.relief', defaultConfig().colors.relief, null)"
+  >
     <ColorField
       :model-value="coin.config.colors.relief"
       fallback-hex="#dca256"

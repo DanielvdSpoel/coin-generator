@@ -28,6 +28,7 @@ from src.core.services.contact_service import ContactService, ContactSettings
 from src.core.services.font_service import FontService
 from src.core.services.icon_service import IconService
 from src.core.services.validation_service import ValidationService
+from src.core.tools.rate_limit import SlidingWindowLimiter
 from src.settings import Settings, get_settings
 
 
@@ -83,6 +84,12 @@ class Container:
                 settings.smtp_password,
             )
         return LoggingMailer()
+
+    @cached_property
+    def _contact_limiter(self) -> SlidingWindowLimiter:
+        return SlidingWindowLimiter(
+            self.settings.contact_rate_limit, self.settings.contact_rate_window_s
+        )
 
     @cached_property
     def _rasteriser(self) -> Rasteriser:
@@ -152,6 +159,8 @@ class Container:
             self.font_registry(),
             self.filament_registry(),
             ContactSettings(to=settings.contact_to, min_seconds=settings.contact_min_seconds),
+            self.validation_service(),
+            self._contact_limiter,
         )
 
 

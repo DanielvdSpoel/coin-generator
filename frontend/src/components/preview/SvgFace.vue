@@ -78,9 +78,9 @@ const HANDLE = 4
     </g>
     <g
       v-if="interactive && model.icon && drag.selected.value && drag.handles.value"
-      class="icon-handles"
+      class="icon-handles text-ink"
       fill="none"
-      stroke="#1a1a1a"
+      stroke="currentColor"
       stroke-width="0.75"
       data-testid="icon-handles"
     >

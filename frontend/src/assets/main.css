@@ -13,13 +13,17 @@
 @theme inline {
   --font-sans: 'Archivo', system-ui, sans-serif;
   --font-heading: var(--font-sans);
-  --color-board: #ecedeb;
-  --color-board-2: #e4e5e2;
-  --color-plate: #ffffff;
-  --color-ink: #141414;
-  --color-ink-2: #5c5f5a;
-  --color-hair: #c9cbc6;
-  --color-rule: #d5d7d2;
+  --color-board: var(--board);
+  --color-board-2: var(--board-2);
+  --color-plate: var(--plate);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-hair: var(--hair);
+  --color-rule: var(--rule);
+  --color-on-ink: var(--on-ink);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -46,6 +50,17 @@
 }
 
 :root {
+  --board: #ecedeb;
+  --board-2: #e4e5e2;
+  --plate: #ffffff;
+  --ink: #141414;
+  --ink-2: #5c5f5a;
+  --hair: #c9cbc6;
+  --rule: #d5d7d2;
+  --on-ink: #ffffff;
+  --ok: #2e7d4f;
+  --warn: #9a6400;
+  --bad: #b3261e;
   --background: #ecedeb;
   --foreground: #141414;
   --card: #ffffff;
@@ -67,6 +82,75 @@
   --radius: 0;
 }
 
+/* Dark: the same plate world at night. Follows the system unless the root has
+   .light; .dark forces it. The coin itself keeps its filament colours. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --board: #161715;
+    --board-2: #1d1e1c;
+    --plate: #222321;
+    --ink: #ecedeb;
+    --ink-2: #a3a69f;
+    --hair: #464843;
+    --rule: #353733;
+    --on-ink: #141414;
+    --ok: #62c28a;
+    --warn: #e0a33a;
+    --bad: #f07167;
+    --background: #161715;
+    --foreground: #ecedeb;
+    --card: #222321;
+    --card-foreground: #ecedeb;
+    --popover: #222321;
+    --popover-foreground: #ecedeb;
+    --primary: #ecedeb;
+    --primary-foreground: #141414;
+    --secondary: #222321;
+    --secondary-foreground: #ecedeb;
+    --muted: #1d1e1c;
+    --muted-foreground: #a3a69f;
+    --accent: #1d1e1c;
+    --accent-foreground: #ecedeb;
+    --destructive: #ecedeb;
+    --border: #464843;
+    --input: #464843;
+    --ring: #ecedeb;
+    color-scheme: dark;
+  }
+}
+:root.dark {
+  --board: #161715;
+  --board-2: #1d1e1c;
+  --plate: #222321;
+  --ink: #ecedeb;
+  --ink-2: #a3a69f;
+  --hair: #464843;
+  --rule: #353733;
+  --on-ink: #141414;
+  --ok: #62c28a;
+  --warn: #e0a33a;
+  --bad: #f07167;
+  --background: #161715;
+  --foreground: #ecedeb;
+  --card: #222321;
+  --card-foreground: #ecedeb;
+  --popover: #222321;
+  --popover-foreground: #ecedeb;
+  --primary: #ecedeb;
+  --primary-foreground: #141414;
+  --secondary: #222321;
+  --secondary-foreground: #ecedeb;
+  --muted: #1d1e1c;
+  --muted-foreground: #a3a69f;
+  --accent: #1d1e1c;
+  --accent-foreground: #ecedeb;
+  --destructive: #ecedeb;
+  --border: #464843;
+  --input: #464843;
+  --ring: #ecedeb;
+  color-scheme: dark;
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -74,29 +158,34 @@
   html {
     color-scheme: light;
   }
+  @media (prefers-color-scheme: dark) {
+    html:not(.light) {
+      color-scheme: dark;
+    }
+  }
   body {
     @apply bg-board text-ink font-sans text-[13px] leading-[1.45] antialiased;
     font-variant-numeric: tabular-nums;
   }
   ::selection {
-    background: #141414;
-    color: #fff;
+    background: var(--ink);
+    color: var(--on-ink);
   }
   :focus-visible {
-    outline: 2px solid #141414;
+    outline: 2px solid var(--ink);
     outline-offset: 2px;
   }
   input[type='number']::-webkit-inner-spin-button {
     opacity: 0.4;
   }
   input[type='range'] {
-    accent-color: #141414;
+    accent-color: var(--ink);
     margin: 0;
     width: 100%;
   }
   input[type='checkbox'],
   input[type='radio'] {
-    accent-color: #141414;
+    accent-color: var(--ink);
     margin: 0;
   }
   summary::-webkit-details-marker {
@@ -123,7 +212,7 @@
     @apply inline-flex cursor-pointer items-center gap-2.5 whitespace-nowrap border border-ink bg-plate px-3.5 py-2 text-ink hover:bg-board disabled:cursor-default disabled:opacity-40;
   }
   .btn-primary {
-    @apply inline-flex cursor-pointer items-center gap-2.5 whitespace-nowrap border border-ink bg-ink px-3.5 py-2 text-white hover:bg-black disabled:cursor-default disabled:opacity-40;
+    @apply inline-flex cursor-pointer items-center gap-2.5 whitespace-nowrap border border-ink bg-ink px-3.5 py-2 text-on-ink hover:opacity-90 disabled:cursor-default disabled:opacity-40;
   }
   .btn-ghost {
     @apply cursor-pointer whitespace-nowrap border border-transparent bg-transparent px-2.5 py-[7px] text-ink hover:border-hair disabled:cursor-default disabled:opacity-35 disabled:hover:border-transparent;

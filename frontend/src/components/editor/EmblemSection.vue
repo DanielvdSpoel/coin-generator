@@ -8,6 +8,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import DetailsGroup from '@/components/common/DetailsGroup.vue'
+import FieldWarning from '@/components/common/FieldWarning.vue'
 import FileDropzone from '@/components/common/FileDropzone.vue'
 import RangeField from '@/components/common/RangeField.vue'
 import TraceDialog from '@/components/dialogs/TraceDialog.vue'
@@ -241,5 +242,6 @@ function set(key: keyof Omit<IconPlacement, 'geometry'>, value: number): void {
       </ul>
     </template>
     <TraceDialog v-model:open="traceOpen" :file="traceFile" :face="face" />
+    <FieldWarning :prefix="`faces.${face}.icon`" />
   </DetailsGroup>
 </template>

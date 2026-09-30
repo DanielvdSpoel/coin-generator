@@ -14,9 +14,11 @@ import { ACESFilmicToneMapping, PerspectiveCamera } from 'three'
 import { computed, ref, shallowRef, watch } from 'vue'
 
 import SceneContent from '@/components/preview/ThreeScene.vue'
+import { useDarkMode } from '@/composables/useDarkMode'
 
 const props = defineProps<{ blobUrl: string | null; reliefHex: string }>()
 const camera = shallowRef<PerspectiveCamera | null>(null)
+const dark = useDarkMode()
 const controls = shallowRef<{
   value?: { target: { set: (x: number, y: number, z: number) => void }; update: () => void }
 } | null>(null)
@@ -79,7 +81,7 @@ defineExpose({ lookFrom })
   <TresCanvas
     :tone-mapping="ACESFilmicToneMapping"
     :tone-mapping-exposure="0.95"
-    clear-color="#f6f6f4"
+    :clear-color="dark ? '#1f201e' : '#f6f6f4'"
     render-mode="always"
     class="absolute inset-0"
   >

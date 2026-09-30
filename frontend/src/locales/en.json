@@ -2,7 +2,8 @@
   "app": {
     "title": "Coin Designer",
     "by": "by Daniel van der Spoel",
-    "designName": "Design name"
+    "designName": "Design name",
+    "privacy": "Your design stays in this browser and in the files you download. The server builds previews and files on request and stores nothing. Colour data from filamentcolors.xyz."
   },
   "header": {
     "undo": "Undo",
@@ -51,7 +52,8 @@
     "confirmHint": "They are marked ⚑ above. Fix them, keep them with “Keep as is”, or download anyway.",
     "anyway": "Download {format} anyway",
     "cancel": "Back to file types",
-    "last": "Last: {file}"
+    "last": "Last: {file}",
+    "noPrinter": "Don't have a printer?"
   },
   "tabs": {
     "front": "Front",
@@ -116,7 +118,8 @@
     "letterSize": "Letter size",
     "spacing": "Spacing",
     "dots": "Separator dots between the two texts",
-    "missingGlyph": "The font has no glyph for: {chars}"
+    "missingGlyph": "The font has no glyph for: {chars}",
+    "bottomHelp": "The bottom text reads left to right, so its letters stand inward from the arc and descenders (g, p, y) hang out toward the rim. Its radius is set larger than the top's; keep the descenders clear of the rim."
   },
   "emblem": {
     "placeholder": "Placeholder mark",
@@ -177,7 +180,8 @@
     "reededSub": "Ridged, like a real coin",
     "plain": "Plain",
     "plainSub": "Smooth, easiest to print",
-    "teeth": "Teeth"
+    "teeth": "Teeth",
+    "help": "Reeding is the ridged edge of a real coin. More ridges look finer; each ridge must stay wider than two nozzle widths to print."
   },
   "lettering": {
     "font": "Font",
@@ -190,7 +194,8 @@
     "nozzle": "Nozzle",
     "hint": "Used only for the condition checks. Not sure? Leave it at 0.4 mm.",
     "enamelDepth": "Enamel",
-    "enamelHint": "How deep the enamel colour goes in the two-colour files: {n} layer at {layer} mm. | How deep the enamel colour goes in the two-colour files: {n} layers at {layer} mm. Two layers hide the body colour under most filaments."
+    "enamelHint": "How deep the enamel colour goes in the two-colour files: {n} layer at {layer} mm. | How deep the enamel colour goes in the two-colour files: {n} layers at {layer} mm. Two layers hide the body colour under most filaments.",
+    "nozzleCustom": "Other nozzle size"
   },
   "advanced": {
     "divider": "Inner divider ring",
@@ -205,7 +210,8 @@
   },
   "presets": {
     "label": "Layout",
-    "custom": "Custom"
+    "custom": "Custom",
+    "diff": "{n} setting differs from {name}. Hover to see which. | {n} settings differ from {name}. Hover to see which."
   },
   "templates": {
     "title": "Start from a lot",
@@ -216,7 +222,28 @@
     "close": "Close",
     "openFile": "Have a .coin.json from earlier? {link}. Templates are anonymised examples.",
     "openIt": "Open it",
-    "offline": "Templates come from the server, which is not reachable right now."
+    "offline": "Templates come from the server, which is not reachable right now.",
+    "step": "Step {n}",
+    "steps": {
+      "1": {
+        "title": "Pick a starting coin",
+        "body": "Any lot below. Everything on it stays editable."
+      },
+      "2": {
+        "title": "Make it yours",
+        "body": "Change the texts, upload a logo, choose the filament colours."
+      },
+      "3": {
+        "title": "Download",
+        "body": "Top right. STL for one colour, 3MF for two, or ask us to print it."
+      }
+    },
+    "saveAs": "Save this design as a template file…",
+    "saveName": "Template name",
+    "saveNotes": "Note · optional",
+    "saveNotesPlaceholder": "What it is for, which colours to print it in",
+    "saveButton": "Save file",
+    "saved": "Saved {file}. Open it here any time, or share it."
   },
   "request": {
     "title": "Request a print",
@@ -235,7 +262,10 @@
     "needEmail": "That email address does not look complete.",
     "tooFast": "Give it a few seconds, then send again.",
     "failed": "The request could not be sent. Try again in a moment.",
-    "offline": "The server is not reachable right now, so the request cannot be sent."
+    "offline": "The server is not reachable right now, so the request cannot be sent.",
+    "rateLimited": "That is a few requests in a short time. Wait ten minutes and send again, or email Daniel directly.",
+    "issues": "The design has {n} thing to check before printing. Daniel will see it in the email. | The design has {n} things to check before printing. Daniel will see them in the email.",
+    "privacy": "Your details are used only to reply about this coin. The server sends one email and keeps nothing."
   },
   "importError": {
     "title": "That file could not be opened",
@@ -248,7 +278,9 @@
     "opened": "Opened {file}.",
     "openedUnchecked": "Opened {file}. The server is away, so it was not checked.",
     "template": "Started from {name}.",
-    "reset": "Reset to a blank coin."
+    "reset": "Reset to a blank coin.",
+    "backOnline": "The server is back: 3D preview and downloads work again.",
+    "wentOffline": "The server is unreachable. You can keep designing; 3D and downloads wait for it."
   },
   "warnings": {
     "thin_stroke": "Letters",
@@ -343,5 +375,32 @@
       "no_digits": "No digits: numbers will show as missing glyphs.",
       "variable_font": "A variable font: the default instance is used."
     }
+  },
+  "condition": {
+    "ok": "Ready to print",
+    "warn": "{n} thing to check | {n} things to check",
+    "bad": "{n} problem | {n} problems",
+    "offline": "Checks need the server"
+  },
+  "severity": {
+    "info": "note",
+    "warn": "worth checking",
+    "error": "will likely not print"
+  },
+  "fix": {
+    "textSize": "Make the letters {value} mm",
+    "bottomRadius": "Move the text inward",
+    "teeth": "Use {value} ridges",
+    "body": "Make the body {value} mm",
+    "diameter": "Grow the coin to {value} mm",
+    "applied": "{change}: done."
+  },
+  "reset": {
+    "short": "Reset",
+    "label": "Reset {section} to the defaults"
+  },
+  "sheet": {
+    "expand": "Show more settings",
+    "collapse": "Show more of the coin"
   }
 }

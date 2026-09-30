@@ -3,7 +3,9 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import DetailsGroup from '@/components/common/DetailsGroup.vue'
+import FieldWarning from '@/components/common/FieldWarning.vue'
 import RangeField from '@/components/common/RangeField.vue'
+import { defaultConfig } from '@/lib/defaults'
 import { useCoinStore } from '@/stores/coin'
 import { useUiStore } from '@/stores/ui'
 import { DESIGN_DIAMETER, MAX_TEXT_LENGTH, type FaceName, type TextSlot } from '@/types/coin'
@@ -24,6 +26,17 @@ function missingGlyphs(slot: TextSlot): string {
   return (i >= 0 ? w.msg.slice(i + 1) : w.msg).trim()
 }
 
+/** Letter size, spacing and dots back to the defaults; texts and radii stay. */
+function reset(): void {
+  const face = defaultConfig().faces.front
+  coin.updateFace(props.face, (f) => {
+    for (const slot of ['top_text', 'bottom_text'] as const) {
+      f[slot].size = face[slot].size
+      f[slot].letter_spacing = face[slot].letter_spacing
+    }
+    f.dots.enabled = face.dots.enabled
+  })
+}
 function setText(slot: TextSlot, e: Event): void {
   const value = (e.target as HTMLInputElement).value.slice(0, MAX_TEXT_LENGTH)
   coin.updateFace(props.face, (face) => (face[slot].text = value), `text:${slot}`)
@@ -34,7 +47,7 @@ function setNumber(slot: TextSlot, key: 'size' | 'letter_spacing', value: number
 </script>
 
 <template>
-  <DetailsGroup number="01" :title="t('sections.inscription')">
+  <DetailsGroup number="01" :title="t('sections.inscription')" :reset="reset">
     <div
       v-for="slot in ['top_text', 'bottom_text'] as const"
       :key="slot"
@@ -84,6 +97,10 @@ function setNumber(slot: TextSlot, key: 'size' | 'letter_spacing', value: number
         :unit="t('units.mm')"
         @update:model-value="setNumber(slot, 'letter_spacing', $event)"
       />
+      <span v-if="slot === 'bottom_text'" class="text-xs text-pretty text-ink-2">{{
+        t('inscription.bottomHelp')
+      }}</span>
+      <FieldWarning :prefix="`faces.${face}.${slot}.`" :exclude="['missing_glyph']" />
     </div>
     <label class="flex cursor-pointer items-center gap-2">
       <input

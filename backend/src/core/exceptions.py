@@ -43,3 +43,11 @@ class MailerError(CoinError):
 
 class PayloadTooLarge(CoinError):
     """An upload or request body exceeds the configured limit."""
+
+
+class RateLimited(CoinError):
+    """A client made too many requests; ``retry_after_s`` says when to try again."""
+
+    def __init__(self, message: str, retry_after_s: int) -> None:
+        super().__init__(message)
+        self.retry_after_s = retry_after_s

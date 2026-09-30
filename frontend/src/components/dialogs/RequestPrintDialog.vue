@@ -1,5 +1,9 @@
 <script setup lang="ts">
-/** "Don't have a printer?": one email to Daniel, the design attached on request (D19). */
+/**
+ * "Don't have a printer?": one email to Daniel, the design attached on request
+ * (D19). The server validates an attached design and lists its printability
+ * warnings in the email; the dialog shows the same count so nobody is surprised.
+ */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -25,6 +29,7 @@ const state = ref<'form' | 'sending' | 'sent'>('form')
 const error = ref('')
 const startedAt = ref(0)
 const fileName = computed(() => fileNameFor(coin.config))
+const issues = computed(() => ui.visibleWarnings.filter((w) => w.severity !== 'info').length)
 
 watch(
   () => ui.dialog === 'request',
@@ -60,7 +65,12 @@ async function send(): Promise<void> {
       cause instanceof ApiError
         ? (cause.body as { detail?: { code?: string }[] })?.detail?.[0]?.code
         : undefined
-    error.value = code === 'spam' ? t('request.tooFast') : t('request.failed')
+    error.value =
+      code === 'spam'
+        ? t('request.tooFast')
+        : code === 'rate_limited'
+          ? t('request.rateLimited')
+          : t('request.failed')
   }
 }
 </script>
@@ -100,6 +110,9 @@ async function send(): Promise<void> {
             t('request.attach', { file: fileName })
           }}</span></label
         >
+        <span v-if="attach && issues" class="text-xs text-pretty text-warn">{{
+          t('request.issues', { n: issues }, issues)
+        }}</span>
         <input
           v-model="honeypot"
           type="text"
@@ -110,6 +123,7 @@ async function send(): Promise<void> {
           class="absolute -left-[9999px] h-px w-px opacity-0"
         />
         <span v-if="error" role="alert">⚑ {{ error }}</span>
+        <span class="text-xs text-pretty text-ink-2">{{ t('request.privacy') }}</span>
         <div class="flex justify-end pt-1">
           <button type="submit" class="btn-primary" :disabled="state === 'sending'">
             {{ state === 'sending' ? t('request.sending') : t('request.send') }}

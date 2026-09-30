@@ -34,3 +34,4 @@ ci-kubeconfig.yaml
 .impeccable/live/roots.json
 .impeccable/live/inject-journal.json
 .playwright-mcp/
+.claude/worktrees/

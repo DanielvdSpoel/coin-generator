@@ -19,9 +19,11 @@ function setName(e: Event): void {
 
 <template>
   <header
-    class="relative z-5 grid grid-cols-[minmax(100px,max-content)_minmax(180px,1fr)_auto] items-center gap-4 border-b border-hair py-2.5 pr-5 pl-6"
+    class="relative z-35 grid grid-cols-[minmax(100px,max-content)_minmax(180px,1fr)_auto] items-center gap-4 border-b border-hair bg-board py-2.5 pr-5 pl-6 max-md:grid-cols-[minmax(0,1fr)] max-md:gap-1.5 max-md:px-3 max-md:py-2"
   >
-    <div class="flex min-w-0 max-w-[280px] items-baseline gap-2 overflow-hidden whitespace-nowrap">
+    <div
+      class="flex min-w-0 max-w-[280px] items-baseline gap-2 overflow-hidden whitespace-nowrap max-md:hidden"
+    >
       <span class="shrink-0 font-semibold tracking-[0.02em]">{{ t('app.title') }}</span>
       <span class="hidden min-w-0 truncate text-ink-2 xl:inline">{{ t('app.by') }}</span>
     </div>
@@ -41,7 +43,9 @@ function setName(e: Event): void {
         >⚑ offline</span
       >
     </div>
-    <nav class="flex shrink-0 items-center gap-0.5">
+    <nav
+      class="flex shrink-0 items-center gap-0.5 max-md:-mx-3 max-md:overflow-x-auto max-md:px-3 max-md:pb-0.5 max-md:[scrollbar-width:none]"
+    >
       <button
         type="button"
         class="btn-ghost"

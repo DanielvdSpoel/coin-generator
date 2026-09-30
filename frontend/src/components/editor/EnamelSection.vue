@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 import DetailsGroup from '@/components/common/DetailsGroup.vue'
 import ColorField from '@/components/editor/ColorField.vue'
-import { clone } from '@/lib/defaults'
+import { clone, defaultConfig } from '@/lib/defaults'
 import { useCoinStore } from '@/stores/coin'
 import type { ColorRef, FaceName } from '@/types/coin'
 
@@ -27,7 +27,12 @@ function copyFromOther(): void {
 </script>
 
 <template>
-  <DetailsGroup number="03" :title="t('sections.enamel')" :sub="t('sections.enamelSub')">
+  <DetailsGroup
+    number="03"
+    :title="t('sections.enamel')"
+    :sub="t('sections.enamelSub')"
+    :reset="() => coin.setField(`faces.${face}.inlay`, defaultConfig().faces[face].inlay, null)"
+  >
     <ColorField
       :model-value="coin.config.faces[face].inlay"
       fallback-hex="#395064"

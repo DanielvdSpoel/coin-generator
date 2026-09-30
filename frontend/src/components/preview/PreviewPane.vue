@@ -5,11 +5,12 @@
  * hand", the real mesh from the server, or both faces flat when the server is
  * away or the visitor prefers it.
  */
-import { computed, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import ConditionChip from '@/components/preview/ConditionChip.vue'
 import SvgFace from '@/components/preview/SvgFace.vue'
-import ThreePreview from '@/components/preview/ThreePreview.vue'
+import type ThreePreviewType from '@/components/preview/ThreePreview.vue'
 import { useDebouncedGlb } from '@/composables/useDebouncedGlb'
 import { faceModel } from '@/lib/svgCoin'
 import { previewSvg } from '@/services/coinService'
@@ -18,6 +19,9 @@ import { useCoinStore } from '@/stores/coin'
 import { useHealthStore } from '@/stores/health'
 import { useUiStore, type Tab } from '@/stores/ui'
 import type { FaceName } from '@/types/coin'
+
+/** three + TresJS are most of the bundle; load them only when "Whole coin" is opened. */
+const ThreePreview = defineAsyncComponent(() => import('@/components/preview/ThreePreview.vue'))
 
 const { t } = useI18n()
 const coin = useCoinStore()
@@ -48,7 +52,7 @@ const glb = useDebouncedGlb(
   computed(() => coin.config),
   { revision: computed(() => coin.revision), enabled: threeD, quality },
 )
-const viewer = ref<InstanceType<typeof ThreePreview> | null>(null)
+const viewer = ref<InstanceType<typeof ThreePreviewType> | null>(null)
 const views = [
   { key: 'front', label: t('three.front') },
   { key: 'back', label: t('three.back') },
@@ -93,12 +97,12 @@ watch(
 <template>
   <section
     :aria-label="t('tabs.coinTitle')"
-    class="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-3.5 px-6 pt-4 pb-6"
+    class="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-3.5 px-6 pt-4 pb-6 max-sm:gap-2.5 max-sm:px-3 max-sm:pt-2.5 max-sm:pb-3"
   >
     <div
       role="tablist"
       :aria-label="t('tabs.coinTitle')"
-      class="grid justify-self-center grid-cols-[repeat(3,minmax(120px,1fr))] border border-hair bg-plate"
+      class="grid justify-self-center grid-cols-[repeat(3,minmax(96px,1fr))] border border-hair bg-plate"
     >
       <button
         v-for="(tab, i) in tabs"
@@ -108,7 +112,7 @@ watch(
         :aria-selected="ui.tab === tab.key"
         class="grid cursor-pointer px-4 py-2 text-center whitespace-nowrap"
         :class="[
-          ui.tab === tab.key ? 'bg-ink text-white' : 'bg-plate text-ink hover:bg-board',
+          ui.tab === tab.key ? 'bg-ink text-on-ink' : 'bg-plate text-ink hover:bg-board',
           i ? 'border-l border-hair' : '',
         ]"
         @click="ui.tab = tab.key"
@@ -121,9 +125,10 @@ watch(
     <div
       class="relative grid min-h-0 place-items-center overflow-hidden border border-hair bg-plate pb-7"
     >
+      <ConditionChip />
       <div
         v-if="ui.tab !== 'coin'"
-        class="relative aspect-square w-[min(600px,86%,calc(100vh-250px))]"
+        class="relative aspect-square w-[min(600px,86%,calc(100vh-250px))] max-lg:w-[min(600px,92%,calc(58svh-190px))]"
       >
         <!-- eslint-disable-next-line vue/no-v-html -- trusted: our own backend's SVG -->
         <div
@@ -204,7 +209,7 @@ watch(
         </figure>
       </div>
       <span
-        class="pointer-events-none absolute right-0 bottom-3 left-0 text-center text-xs text-ink-2"
+        class="pointer-events-none absolute right-0 bottom-3 left-0 text-center text-xs text-ink-2 max-sm:hidden"
         >{{ hint }}</span
       >
       <div

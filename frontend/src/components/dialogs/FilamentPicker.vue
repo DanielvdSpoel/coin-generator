@@ -138,7 +138,7 @@ const swatchTitle = (f: Filament) =>
             :key="b.name"
             type="button"
             class="flex w-full cursor-pointer justify-between gap-2 px-3 py-[7px] text-left"
-            :class="b.name === activeBrand ? 'bg-ink text-white' : 'hover:bg-board'"
+            :class="b.name === activeBrand ? 'bg-ink text-on-ink' : 'hover:bg-board'"
             :data-picker-active="b.name === activeBrand || undefined"
             @click="((brand = b.name), (type = null))"
           >

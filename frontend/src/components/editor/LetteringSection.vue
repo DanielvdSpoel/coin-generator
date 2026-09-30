@@ -6,6 +6,7 @@ import DetailsGroup from '@/components/common/DetailsGroup.vue'
 import FontUploadDialog from '@/components/dialogs/FontUploadDialog.vue'
 import { listFonts, type LibraryFont } from '@/lib/library'
 import { useCatalogStore } from '@/stores/catalog'
+import { defaultConfig } from '@/lib/defaults'
 import { useCoinStore } from '@/stores/coin'
 import { useHealthStore } from '@/stores/health'
 
@@ -49,7 +50,11 @@ function useAgain(f: LibraryFont): void {
 </script>
 
 <template>
-  <DetailsGroup number="04" :title="t('sections.lettering')">
+  <DetailsGroup
+    number="04"
+    :title="t('sections.lettering')"
+    :reset="() => coin.setField('font', defaultConfig().font, null)"
+  >
     <label class="grid grid-cols-[76px_minmax(0,1fr)] items-center gap-3">
       <span class="text-ink-2">{{ t('lettering.font') }}</span>
       <select

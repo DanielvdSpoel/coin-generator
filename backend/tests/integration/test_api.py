@@ -330,7 +330,7 @@ def _contact(**overrides) -> dict:
 def test_contact_without_attachment(api: TestClient, engine_container) -> None:
     mailer = engine_container.mailer()
     mailer.sent.clear()
-    response = api.post("/api/contact", json=_contact())
+    response = api.post("/api/contact", json=_contact(), headers=_from("10.0.0.1"))
     assert response.status_code == 202 and response.json() == {}
     assert len(mailer.sent) == 1
     assert mailer.sent[0]["to"] == engine_container.settings.contact_to
@@ -341,9 +341,13 @@ def test_contact_without_attachment(api: TestClient, engine_container) -> None:
 def test_contact_with_attachment(api: TestClient, engine_container) -> None:
     mailer = engine_container.mailer()
     mailer.sent.clear()
-    config = config_with(**{"meta.name": "Team Coin"}).to_json_dict()
-    response = api.post("/api/contact", json=_contact(attach_design=True, config=config))
+    config = config_with(**{"meta.name": "Team Coin", "size.diameter_mm": 40}).to_json_dict()
+    response = api.post(
+        "/api/contact", json=_contact(attach_design=True, config=config), headers=_from("10.0.0.2")
+    )
     assert response.status_code == 202
+    assert "Printability:" in mailer.sent[0]["text"]
+    assert "faces.front.top_text.size" in mailer.sent[0]["text"]
     attachments = mailer.sent[0]["attachments"]
     assert [a.filename for a in attachments] == ["team-coin.coin.json", "team-coin-front.svg"]
     assert json.loads(attachments[0].content)["meta"]["name"] == "Team Coin"
@@ -361,6 +365,23 @@ def test_contact_rejects_bots(api: TestClient) -> None:
     assert missing.status_code == 422 and missing.json()["detail"][0]["loc"] == ["config"]
     bad_email = api.post("/api/contact", json=_contact(email="not-an-email"))
     assert bad_email.status_code == 422
+
+
+def test_contact_is_rate_limited_per_client(api: TestClient, engine_container) -> None:
+    limit = engine_container.settings.contact_rate_limit
+    for _ in range(limit):
+        assert (
+            api.post("/api/contact", json=_contact(), headers=_from("10.9.9.9")).status_code == 202
+        )
+    blocked = api.post("/api/contact", json=_contact(), headers=_from("10.9.9.9, 172.16.0.1"))
+    assert blocked.status_code == 429
+    assert blocked.json()["detail"][0]["code"] == "rate_limited"
+    assert int(blocked.headers["retry-after"]) > 0
+    assert api.post("/api/contact", json=_contact(), headers=_from("10.9.9.10")).status_code == 202
+
+
+def _from(ip: str) -> dict[str, str]:
+    return {"X-Forwarded-For": ip}
 
 
 def test_docs_are_hidden_outside_dev(api: TestClient) -> None:

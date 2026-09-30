@@ -22,7 +22,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: T] }>()
       :aria-checked="o.value === modelValue"
       class="grid cursor-pointer gap-px px-2 py-[9px] text-center"
       :class="[
-        o.value === modelValue ? 'bg-ink text-white' : 'bg-plate text-ink hover:bg-board',
+        o.value === modelValue ? 'bg-ink text-on-ink' : 'bg-plate text-ink hover:bg-board',
         i ? 'border-l border-hair' : '',
       ]"
       @click="emit('update:modelValue', o.value)"

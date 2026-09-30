@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     smtp_from: str = "coins@danielvdspoel.com"
     contact_to: str = "contact@danielvdspoel.nl"
     contact_min_seconds: float = 3.0
+    contact_rate_limit: int = 3
+    """Contact requests per client IP per ``contact_rate_window_s``, per pod."""
+    contact_rate_window_s: float = 600.0
 
     # Data locations
     fonts_dir: Path = BACKEND_DIR / "fonts"

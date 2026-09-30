@@ -16,6 +16,7 @@ import SettingsPanel from '@/components/editor/SettingsPanel.vue'
 import PreviewPane from '@/components/preview/PreviewPane.vue'
 import { useAutosave } from '@/composables/useAutosave'
 import { useFontFaces } from '@/composables/useFontFaces'
+import { useHealthWatch } from '@/composables/useHealthWatch'
 import { useKeyboard } from '@/composables/useKeyboard'
 import { useWarnings } from '@/composables/useWarnings'
 import { ConfigImportError, exportConfigFile, importConfig, readFileText } from '@/lib/configIO'
@@ -36,10 +37,13 @@ const { restored } = useAutosave()
 useFontFaces()
 useWarnings()
 useKeyboard()
+const healthWatch = useHealthWatch()
 
 onMounted(async () => {
-  if (!restored) ui.dialog = 'templates'
-  else
+  if (!restored) {
+    ui.firstRun = true
+    ui.dialog = 'templates'
+  } else
     ui.showToast(
       t('toasts.restored'),
       {
@@ -49,6 +53,7 @@ onMounted(async () => {
       8000,
     )
   await health.refresh()
+  healthWatch.start()
   await catalog.load()
 })
 
@@ -84,11 +89,9 @@ async function onFile(e: Event): Promise<void> {
 <template>
   <div class="grid h-svh grid-rows-[auto_minmax(0,1fr)]">
     <AppHeader @open="openFile" @save="save" />
-    <main
-      class="grid min-h-0 grid-cols-[400px_minmax(0,1fr)] max-lg:grid-cols-1 max-lg:grid-rows-[minmax(0,1fr)_auto] max-lg:overflow-auto"
-    >
-      <SettingsPanel class="max-lg:order-2 max-lg:border-t max-lg:border-r-0" />
-      <PreviewPane class="max-lg:order-1" />
+    <main class="grid min-h-0 grid-cols-[400px_minmax(0,1fr)] max-lg:grid-cols-1 max-lg:pb-[42svh]">
+      <SettingsPanel />
+      <PreviewPane />
     </main>
     <input
       ref="fileInput"

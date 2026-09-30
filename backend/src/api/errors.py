@@ -17,6 +17,7 @@ from src.core.exceptions import (
     MailerError,
     NotWatertight,
     PayloadTooLarge,
+    RateLimited,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,12 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(PayloadTooLarge)
     async def _too_large(request: Request, exc: PayloadTooLarge):
         return error_response(413, "payload_too_large", str(exc))
+
+    @app.exception_handler(RateLimited)
+    async def _rate_limited(request: Request, exc: RateLimited):
+        return error_response(
+            429, "rate_limited", str(exc), **{"Retry-After": str(exc.retry_after_s)}
+        )
 
     @app.exception_handler(BuildTimeout)
     async def _timeout(request: Request, exc: BuildTimeout):

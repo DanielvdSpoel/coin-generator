@@ -10,6 +10,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import WarningList from '@/components/common/WarningList.vue'
 import { useCoinStats } from '@/composables/useCoinStats'
 import { downloadBlob, fileNameFor, serialiseConfig } from '@/lib/configIO'
 import { colorRefFor, filamentSlots, mm } from '@/lib/printSummary'
@@ -19,7 +20,7 @@ import { useCatalogStore } from '@/stores/catalog'
 import { useCoinStore } from '@/stores/coin'
 import { useHealthStore } from '@/stores/health'
 import { useUiStore } from '@/stores/ui'
-import type { ExportFormat, PrintMaterial, Warning } from '@/types/coin'
+import type { ExportFormat, PrintMaterial } from '@/types/coin'
 
 const { t } = useI18n()
 const coin = useCoinStore()
@@ -67,19 +68,6 @@ const swaps = computed(
     ) ?? [],
 )
 
-function where(w: Warning): string {
-  const face = w.path.match(/^faces\.(front|back)\./)?.[1]
-  const slot = w.path.match(/\.(top_text|bottom_text)\./)?.[1]
-  const part = slot
-    ? t(slot === 'top_text' ? 'inscription.top' : 'inscription.bottom')
-    : t(`warnings.${w.code}`)
-  return face ? `${t(`warnings.face.${face}`)} · ${part}` : part
-}
-function goTo(w: Warning): void {
-  const face = w.path.match(/^faces\.(front|back)\./)?.[1] as 'front' | 'back' | undefined
-  ui.tab = face ?? 'coin'
-  open.value = false
-}
 /** Re-validate, then download, or stop at the confirmation when an error remains. */
 async function request(item: Item): Promise<void> {
   pending.value = null
@@ -134,6 +122,10 @@ async function copyJson(): Promise<void> {
     ui.showToast(t('download.copyFailed'))
   }
 }
+function requestPrint(): void {
+  close()
+  ui.dialog = 'request'
+}
 function onPointerDown(e: PointerEvent): void {
   if (open.value && root.value && !root.value.contains(e.target as Node)) close()
 }
@@ -164,7 +156,7 @@ defineExpose({ close })
     </button>
     <div
       v-if="open"
-      class="absolute top-[calc(100%+6px)] right-0 z-20 grid max-h-[calc(100vh-80px)] w-[340px] overflow-auto border border-ink bg-plate"
+      class="absolute top-[calc(100%+6px)] right-0 z-20 grid max-h-[calc(100vh-80px)] w-[340px] overflow-auto border border-ink bg-plate max-md:fixed max-md:inset-x-2 max-md:top-[92px] max-md:max-h-[calc(100svh-100px)] max-md:w-auto"
     >
       <div class="grid gap-1 border-b border-ink bg-board px-3.5 py-3">
         <strong class="font-semibold">{{
@@ -175,27 +167,7 @@ defineExpose({ close })
         <span v-if="!warnings.length" class="text-xs text-ink-2">{{
           t('download.nothing', { nozzle: coin.config.print.nozzle_mm + ' mm' })
         }}</span>
-        <div
-          v-for="(w, i) in warnings"
-          :key="w.code + w.path"
-          class="grid grid-cols-[auto_minmax(0,1fr)] gap-2 pt-2 pb-0.5"
-          :class="i ? 'border-t border-rule' : ''"
-        >
-          <span aria-hidden="true">⚑</span>
-          <div class="grid gap-1">
-            <span class="text-pretty"
-              ><strong class="font-semibold">{{ where(w) }}.</strong> {{ w.msg }}</span
-            >
-            <div class="flex items-baseline gap-3.5">
-              <button type="button" class="link font-semibold" @click="goTo(w)">
-                {{ t('download.goTo') }}
-              </button>
-              <button type="button" class="link-quiet text-xs" @click="ui.acknowledge(w)">
-                {{ t('download.keep') }}
-              </button>
-            </div>
-          </div>
-        </div>
+        <WarningList :warnings="warnings" @navigate="close" />
       </div>
       <div v-if="stats" class="grid gap-1.5 border-b border-ink px-3.5 py-3 text-xs">
         <span class="caps">{{ t('download.summary') }}</span>
@@ -252,9 +224,14 @@ defineExpose({ close })
       <div
         class="flex items-baseline justify-between gap-3 border-t border-rule bg-board px-3.5 py-2 text-xs text-ink-2"
       >
-        <button type="button" class="link-quiet" @click="copyJson">
-          {{ t('download.copyJson') }}
-        </button>
+        <span class="flex items-baseline gap-3">
+          <button type="button" class="link-quiet" @click="copyJson">
+            {{ t('download.copyJson') }}
+          </button>
+          <button type="button" class="link-quiet" @click="requestPrint">
+            {{ t('download.noPrinter') }}
+          </button>
+        </span>
         <span v-if="ui.lastDownload" class="truncate" :title="ui.lastDownload">{{
           t('download.last', { file: ui.lastDownload })
         }}</span>

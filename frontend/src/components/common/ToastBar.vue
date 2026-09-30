@@ -15,7 +15,7 @@ const ui = useUiStore()
       v-if="ui.toast"
       :key="ui.toast.id"
       role="status"
-      class="fixed bottom-6 left-1/2 z-60 flex max-w-[min(560px,calc(100vw-32px))] -translate-x-1/2 items-baseline gap-4 bg-ink px-4 py-2.5 text-white"
+      class="fixed bottom-6 left-1/2 z-60 flex max-w-[min(560px,calc(100vw-32px))] -translate-x-1/2 items-baseline gap-4 bg-ink px-4 py-2.5 text-on-ink"
     >
       <span class="text-pretty">{{ ui.toast.text }}</span>
       <button

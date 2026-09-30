@@ -15,6 +15,8 @@ from src.core.interfaces.font_registry import FontRegistry
 from src.core.interfaces.mailer import Attachment, Mailer
 from src.core.services.coin_service import slugify
 from src.core.services.colors import resolve_colors
+from src.core.services.validation_service import ValidationService
+from src.core.tools.rate_limit import SlidingWindowLimiter
 
 
 class ContactRequest(BaseModel):
@@ -42,14 +44,25 @@ class ContactService:
         fonts: FontRegistry,
         filaments: FilamentRegistry,
         settings: ContactSettings,
+        validation: ValidationService,
+        limiter: SlidingWindowLimiter,
     ) -> None:
         self._mailer = mailer
         self._fonts = fonts
         self._filaments = filaments
         self._settings = settings
+        self._validation = validation
+        self._limiter = limiter
 
-    def send(self, request: ContactRequest, now: float | None = None) -> None:
-        """Validate the anti-spam rules and send. Raises ``InvalidConfig`` for bots."""
+    def send(
+        self, request: ContactRequest, client: str = "unknown", now: float | None = None
+    ) -> None:
+        """Check the anti-spam rules and send.
+
+        Raises ``InvalidConfig`` for bots and ``RateLimited`` when ``client`` sent
+        too many requests. An attached design is validated, and its printability
+        warnings go into the email so problems show up before printing.
+        """
         now = time.time() if now is None else now
         if request.honeypot:
             raise InvalidConfig(
@@ -101,5 +114,9 @@ class ContactService:
                 f"Design: {config.meta.name or 'untitled'}, {config.size.diameter_mm:g} mm, "
                 f"{config.edge.style} edge",
             ]
+            warnings = self._validation.validate(config)
+            lines += ["", "Printability:"]
+            lines += [f"- {w.severity}: {w.path}: {w.msg}" for w in warnings] or ["- no warnings"]
+        self._limiter.hit(client)
         subject = f"Coin print request from {request.name}"
         self._mailer.send(self._settings.to, subject, "\n".join(lines), attachments)

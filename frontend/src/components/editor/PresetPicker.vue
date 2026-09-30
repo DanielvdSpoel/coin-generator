@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n'
 
 import SegmentedControl from '@/components/common/SegmentedControl.vue'
 import { getPath, isObject } from '@/lib/paths'
+import { humanPath, nearestPreset } from '@/lib/presetDiff'
 import { useCatalogStore } from '@/stores/catalog'
 import { useCoinStore } from '@/stores/coin'
 
@@ -26,6 +27,10 @@ const options = computed(() => [
   ...catalog.presets.map((p) => ({ value: p.id, label: p.name })),
   ...(active.value === 'custom' ? [{ value: 'custom', label: t('presets.custom') }] : []),
 ])
+const nearest = computed(() =>
+  active.value === 'custom' ? nearestPreset(coin.config, catalog.presets) : null,
+)
+const diffTitle = computed(() => nearest.value?.diff.map(humanPath).join('\n') ?? '')
 function pick(id: string | number): void {
   const preset = catalog.presets.find((p) => p.id === id)
   if (preset) coin.applyPreset(preset.patch)
@@ -44,5 +49,18 @@ function pick(id: string | number): void {
       :label="t('presets.label')"
       @update:model-value="pick"
     />
+    <span
+      v-if="nearest"
+      class="col-start-2 text-xs text-ink-2"
+      :title="diffTitle"
+      data-testid="preset-diff"
+      >{{
+        t(
+          'presets.diff',
+          { name: nearest.preset.name, n: nearest.diff.length },
+          nearest.diff.length,
+        )
+      }}</span
+    >
   </div>
 </template>

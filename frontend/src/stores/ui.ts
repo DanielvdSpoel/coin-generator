@@ -23,6 +23,10 @@ export const useUiStore = defineStore('ui', () => {
   const exporting = ref<string | null>(null)
   const exportError = ref<string | null>(null)
   const lastDownload = ref<string | null>(null)
+  /** No design was restored: this browser has not used the designer before. */
+  const firstRun = ref(false)
+  /** Phones: the settings bottom sheet is expanded over the preview. */
+  const sheetOpen = ref(false)
   const importErrors = ref<{ loc: (string | number)[]; msg: string }[]>([])
   const importMessage = ref('')
   let toastTimer: ReturnType<typeof setTimeout> | undefined
@@ -64,6 +68,8 @@ export const useUiStore = defineStore('ui', () => {
     exporting,
     exportError,
     lastDownload,
+    firstRun,
+    sheetOpen,
     importErrors,
     importMessage,
     showToast,
