@@ -27,6 +27,7 @@ def fonts(glyphs) -> Mock:
 def filaments() -> Mock:
     registry = Mock(FilamentRegistry)
     registry.resolve.side_effect = lambda ref: ref.hex or "#dca256"
+    registry.finish.return_value = ""
     return registry
 
 
