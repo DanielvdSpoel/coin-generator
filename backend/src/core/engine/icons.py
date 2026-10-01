@@ -80,26 +80,62 @@ def place_icon(geom: BaseGeometry, placement: IconPlacement, r_limit: float) -> 
     return geom
 
 
-def ink_mask(image: Image.Image, threshold: int = 128, invert: bool = False) -> np.ndarray:
-    """Boolean ink mask of an image (unpadded).
+BADGE_PAPER_DARKNESS = 20
+_BADGE_RAMP = 8.0
+
+
+def ink_field(
+    image: Image.Image, threshold: int = 128, invert: bool = False
+) -> tuple[np.ndarray, float]:
+    """Continuous ink field of an image and the level its edge sits at.
+
+    Ink is wherever ``field > level``. Unlike a hard mask, the field keeps the
+    anti-aliased edge pixels, so contouring it at ``level`` finds the edge to a
+    fraction of a pixel instead of following the pixel staircase.
 
     Uses alpha when the image has real transparency, darkness otherwise (``invert``
     flips that: light pixels become ink).
     """
-    a = np.array(image.convert("RGBA"))
+    a = np.array(image.convert("RGBA")).astype(np.float64)
     darkness = 255 - a[:, :, :3].min(2)
+    level = float(threshold)
     if a[:, :, 3].min() < 250:
-        mask = a[:, :, 3] > threshold
+        field = a[:, :, 3]
         # A badge rasterised from SVG is opaque inside its outline with white fills
         # for the "paper": when the opaque area holds both dark ink and near-white,
         # the near-white is background, not ink. A plain coloured mark is unaffected.
-        opaque = darkness[mask]
-        if opaque.size and (opaque > 128).any() and (opaque < 20).any():
-            mask &= darkness >= 20
+        opaque = darkness[field > level]
+        if opaque.size and (opaque > 128).any() and (opaque < BADGE_PAPER_DARKNESS).any():
+            # A steep ramp through the level at darkness 19.5: integer darkness >= 20 is ink.
+            paper = level + (darkness - (BADGE_PAPER_DARKNESS - 0.5)) * _BADGE_RAMP
+            # Bounded like alpha, so ``smooth_field`` blurs paper and ink evenly.
+            field = np.minimum(field, np.clip(paper, level - 255, level + 255))
     else:
-        mask = darkness > threshold
+        field = darkness
     if invert:
-        mask = ~mask
+        # Mirror around the level; the half step keeps ``field == level`` on the ink side.
+        field = 2 * level + 0.5 - field
+    return field, level
+
+
+def smooth_field(field: np.ndarray, sigma_px: float) -> np.ndarray:
+    """Gaussian blur of an ink field; ``sigma_px`` in field pixels.
+
+    Rounds off the pixel staircase of a hard-edged (not anti-aliased) source, which
+    contouring alone would trace faithfully. Straight edges stay where they were;
+    corners round by about ``sigma_px``.
+    """
+    if sigma_px <= 0:
+        return field
+    from scipy import ndimage
+
+    return ndimage.gaussian_filter(field, sigma_px, mode="nearest")
+
+
+def ink_mask(image: Image.Image, threshold: int = 128, invert: bool = False) -> np.ndarray:
+    """Boolean ink mask of an image (unpadded): ``ink_field`` above its level."""
+    field, level = ink_field(image, threshold, invert)
+    mask = field > level
     if not mask.any():
         raise IconTraceFailed("nothing to trace: the image has no ink")
     return mask
@@ -117,24 +153,33 @@ def mask_warnings(mask: np.ndarray, photo_components: int = 40) -> list[str]:
     return codes
 
 
-def trace_mask(mask: np.ndarray, simplify: float = 0.4) -> BaseGeometry:
-    """Ink mask → normalised geometry by marching squares.
+def trace_field(field: np.ndarray, level: float, simplify: float = 0.4) -> BaseGeometry:
+    """Ink field → normalised geometry by marching squares at ``level``.
 
-    The ``simplify`` removes the pixel stair-steps that would otherwise triangulate
-    into degenerate faces (engine gotcha #3); the Y flip turns image rows into
-    Y-up geometry (gotcha #5).
+    Contouring the continuous field places each vertex on the interpolated edge,
+    so anti-aliased sources trace smooth instead of stair-stepped. The ``simplify``
+    removes what pixel noise is left, which would otherwise triangulate into
+    degenerate faces (engine gotcha #3); the Y flip turns image rows into Y-up
+    geometry (gotcha #5).
     """
     from skimage import measure
 
-    mask = np.pad(mask.astype(np.uint8), 2)  # pad so shapes touching the border close
+    # Pad below the level so shapes touching the border close.
+    background = min(float(field.min()), level - 1)
+    field = np.pad(field.astype(np.float64), 2, constant_values=background)
     loops = [
         np.column_stack([c[:, 1], c[:, 0]])  # (row, col) → (x, y)
-        for c in measure.find_contours(mask, 0.5)
+        for c in measure.find_contours(field, level)
         if len(c) >= 4
     ]
     geom = rings_to_poly(loops).simplify(simplify).buffer(0)
     geom = affinity.scale(geom, 1, -1, origin=(0, 0))  # image Y-down → geometry Y-up
     return normalise(geom)
+
+
+def trace_mask(mask: np.ndarray, simplify: float = 0.4) -> BaseGeometry:
+    """Boolean ink mask → normalised geometry (``trace_field`` of a hard edge)."""
+    return trace_field(mask.astype(np.float64), 0.5, simplify)
 
 
 def trace_image(
@@ -143,8 +188,11 @@ def trace_image(
     threshold: int = 128,
     invert: bool = False,
 ) -> BaseGeometry:
-    """Raster → normalised geometry: ``ink_mask`` then ``trace_mask``."""
-    return trace_mask(ink_mask(image, threshold, invert), simplify)
+    """Raster → normalised geometry: ``ink_field`` then ``trace_field``."""
+    field, level = ink_field(image, threshold, invert)
+    if not (field > level).any():
+        raise IconTraceFailed("nothing to trace: the image has no ink")
+    return trace_field(field, level, simplify)
 
 
 THIN_RING_FILL = 0.35

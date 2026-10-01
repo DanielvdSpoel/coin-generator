@@ -167,14 +167,31 @@ class Dots(_Model):
     radius: float = Field(5.0, ge=1, le=10)
 
 
+class TraceCrop(_Model):
+    """The part of the source to trace, as fractions of its width and height."""
+
+    x: float = Field(0, ge=0, lt=1)
+    y: float = Field(0, ge=0, lt=1)
+    w: float = Field(1, gt=0, le=1)
+    h: float = Field(1, gt=0, le=1)
+
+    @model_validator(mode="after")
+    def _inside(self) -> Self:
+        if self.x + self.w > 1 + 1e-6 or self.y + self.h > 1 + 1e-6:
+            raise ValueError("crop must lie inside the image")
+        return self
+
+
 class TraceOptions(_Model):
     threshold: int = Field(128, ge=0, le=255)
     simplify: float = Field(0.4, ge=0, le=5)
+    smooth: float = Field(0.5, ge=0, le=2, description="Edge blur, in source pixels")
     drop_largest: bool = False
     inner_disc: float | None = None
     min_area: float = Field(0, ge=0)
     drop_thin_rings: bool = True
     invert: bool = False
+    crop: TraceCrop | None = None
 
 
 class IconSource(_Model):

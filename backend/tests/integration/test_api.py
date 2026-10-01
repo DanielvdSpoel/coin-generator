@@ -268,6 +268,25 @@ def test_icon_trace_png(api: TestClient) -> None:
     assert api.post("/api/validate", json={"config": config}).status_code == 200
 
 
+def test_icon_trace_crop_is_applied_and_validated(api: TestClient) -> None:
+    crop = {"x": 0.1, "y": 0.1, "w": 0.8, "h": 0.8}
+    response = api.post(
+        "/api/icons/trace",
+        files={"file": ("dot.png", _png(), "image/png")},
+        data={"options": json.dumps({"crop": crop})},
+    )
+    assert response.status_code == 200
+    assert response.json()["geometry"]["source"]["trace"]["crop"] == crop
+
+    outside = json.dumps({"crop": {"x": 0.5, "y": 0, "w": 0.8, "h": 1}})
+    response = api.post(
+        "/api/icons/trace",
+        files={"file": ("dot.png", _png(), "image/png")},
+        data={"options": outside},
+    )
+    assert response.status_code == 422
+
+
 def test_icon_trace_svg(api: TestClient) -> None:
     svg = (
         b'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">'

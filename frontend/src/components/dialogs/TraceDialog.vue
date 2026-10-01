@@ -1,12 +1,13 @@
 <script setup lang="ts">
 /**
- * Turn an uploaded image into an emblem: the source on the left, the server's
- * traced preview on the right, the trace knobs beneath. Every change re-traces
- * after a short debounce; only the latest answer is shown.
+ * Turn an uploaded image into an emblem: the source on the left (drag over it to
+ * crop), the server's traced preview on the right, the trace knobs beneath. Every
+ * change re-traces after a short debounce; only the latest answer is shown.
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import CropBox, { type Crop } from '@/components/common/CropBox.vue'
 import RangeField from '@/components/common/RangeField.vue'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { newIconId, saveIcon } from '@/lib/library'
@@ -31,6 +32,7 @@ const coin = useCoinStore()
 const options = ref<Required<TraceOptions>>({ ...DEFAULT_TRACE_OPTIONS })
 const innerDisc = ref(false)
 const innerDiscValue = ref(0.7)
+const crop = ref<Crop | null>(null)
 const result = ref<TraceResponse | null>(null)
 const error = ref('')
 const busy = ref(false)
@@ -44,6 +46,7 @@ let lastRequested = ''
 const effective = computed<TraceOptions>(() => ({
   ...options.value,
   inner_disc: innerDisc.value ? innerDiscValue.value : null,
+  crop: crop.value,
 }))
 
 function detailMessage(body: unknown): string {
@@ -99,6 +102,7 @@ watch(
     options.value = { ...DEFAULT_TRACE_OPTIONS }
     innerDisc.value = false
     innerDiscValue.value = 0.7
+    crop.value = null
     result.value = null
     error.value = ''
     sourceUrl.value = URL.createObjectURL(file)
@@ -170,14 +174,25 @@ function use(): void {
       <div class="grid grid-cols-2 gap-px border-b border-rule bg-rule">
         <figure class="m-0 grid justify-items-center gap-2 bg-plate p-3">
           <div class="grid size-[280px] place-items-center bg-board">
-            <img
-              v-if="sourceUrl"
-              :src="sourceUrl"
-              alt=""
-              class="max-h-[280px] max-w-[280px] object-contain"
-            />
+            <CropBox v-if="sourceUrl" v-model="crop" :label="t('trace.cropArea')">
+              <img
+                :src="sourceUrl"
+                alt=""
+                draggable="false"
+                class="block max-h-[280px] max-w-[280px] min-w-16 object-contain"
+              />
+            </CropBox>
           </div>
-          <figcaption class="caps">{{ t('trace.source') }}</figcaption>
+          <figcaption class="caps">
+            {{ t('trace.source') }}
+            <span class="normal-case tracking-normal">
+              ·
+              <button v-if="crop" type="button" class="link" @click="crop = null">
+                {{ t('trace.cropReset') }}
+              </button>
+              <template v-else>{{ t('trace.cropHint') }}</template>
+            </span>
+          </figcaption>
         </figure>
         <figure class="m-0 grid justify-items-center gap-2 bg-plate p-3">
           <!-- eslint-disable-next-line vue/no-v-html -- trusted: our own backend's trace preview -->
@@ -218,6 +233,16 @@ function use(): void {
           :decimals="1"
           :unit="t('units.u')"
           @update:model-value="options.simplify = $event"
+        />
+        <RangeField
+          :label="t('trace.smooth')"
+          :model-value="options.smooth"
+          :min="0"
+          :max="2"
+          :step="0.1"
+          :decimals="1"
+          :unit="t('units.px')"
+          @update:model-value="options.smooth = $event"
         />
         <RangeField
           :label="t('trace.minArea')"
