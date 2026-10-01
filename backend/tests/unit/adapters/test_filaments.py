@@ -144,6 +144,8 @@ def test_unknown_filament_id_raises() -> None:
     registry = MemoryFilamentRegistry(FakeSource([_swatch("fc-1", "#111111")]), [])
     with pytest.raises(UnknownFilament, match="fc-404"):
         registry.resolve(ColorRef(filament="fc-404"))
+    with pytest.raises(UnknownFilament):
+        registry.finish(ColorRef(filament="fc-404"))
 
 
 def test_refresh_swaps_in_live_data_and_keeps_overrides() -> None:
@@ -203,6 +205,8 @@ def test_committed_data_files_load(engine_container) -> None:
     assert registry.resolve(ColorRef(filament="local-bambu-pla-silk-silver")) == "#b9c0c4"
     assert registry.resolve(ColorRef(filament="local-bambu-pla-matte-dark-blue")) == "#395064"
     assert registry.resolve(ColorRef(filament="local-bambu-pla-basic-blue")) == "#0a2989"
+    assert registry.finish(ColorRef(filament="local-bambu-pla-silk-gold")) == "PLA Silk+"
+    assert registry.finish(ColorRef(hex="#c9a468")) == ""
     assert load_overrides(BACKEND_DIR / "data" / "nope.json") == []
 
 

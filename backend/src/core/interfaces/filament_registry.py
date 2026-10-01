@@ -16,5 +16,9 @@ class FilamentRegistry(ABC):
         """The ``#rrggbb`` a colour reference stands for. Raises ``UnknownFilament``."""
 
     @abstractmethod
+    def finish(self, color: ColorRef) -> str:
+        """The filament's finish ("PLA Silk+"), ``""`` for a hex. Raises ``UnknownFilament``."""
+
+    @abstractmethod
     def version(self) -> FilamentVersion:
         """The version of the data currently being served."""
