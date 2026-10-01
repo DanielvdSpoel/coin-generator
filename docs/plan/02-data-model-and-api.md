@@ -117,8 +117,8 @@ Traced outline, normalised to max radius 100, centred at the origin, Y up:
   "source": {                            // provenance, optional, not hashed
     "filename": "cat.png",
     "sha256": "…",
-    "trace": { "threshold": 128, "simplify": 0.4, "drop_largest": false,
-               "inner_disc": null, "min_area": 0, "invert": false },
+    "trace": { "threshold": 128, "simplify": 0.4, "smooth": 0.5, "drop_largest": false,
+               "inner_disc": null, "min_area": 0, "invert": false, "crop": null },
     "data_url": null                     // opt-in embed of the original (open question 6)
   }
 }
@@ -167,7 +167,7 @@ All JSON in, JSON or binary out. Prefix `/api`. All geometry endpoints accept
 | `POST /api/preview/glb` | `{ config, quality?: "preview"\|"export" }` | `model/gltf-binary`, `ETag`, `X-Cache` | three PBR materials (relief, front inlay, back inlay); `If-None-Match` → 304; gzip |
 | `POST /api/export` | `{ config, format: "stl"\|"3mf"\|"stl-pair" }` | binary, `Content-Disposition: attachment`, `X-Coin-Warnings` | full quality; refuses non-watertight (500 `not_watertight`) |
 | `POST /api/contact` | `{ name, email, message?, attach_design: bool, config?: CoinConfig, honeypot: "", started_at }` | `202 {}` | sends one email to the site owner; design attached as `<slug>.coin.json` plus a rendered front-face SVG; rate-limited per IP; honeypot and minimum fill time reject bots (D19) |
-| `POST /api/icons/trace` | multipart: `file` (≤ 10 MB, D14), plus JSON `options` (threshold, simplify, drop_largest, inner_disc, min_area, invert, embed_source) | `{ geometry: IconGeometry, preview_svg, parts, holes, bbox, warnings }` | stateless; PNG/SVG/JPEG; SVG is rasterised first |
+| `POST /api/icons/trace` | multipart: `file` (≤ 10 MB, D14), plus JSON `options` (threshold, simplify, smooth, drop_largest, inner_disc, min_area, invert, crop, embed_source; `smooth` blurs the edge by that many source pixels before contouring; `crop` is `{x, y, w, h}` in fractions of the image, or null) | `{ geometry: IconGeometry, preview_svg, parts, holes, bbox, warnings }` | stateless; PNG/JPEG/WebP/SVG; SVG is rasterised first; the edge is contoured on the grayscale/alpha field, not a hard mask |
 
 ### Warning codes (from `/validate`, also embedded in export responses as a header)
 

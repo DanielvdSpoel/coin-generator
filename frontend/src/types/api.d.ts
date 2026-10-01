@@ -186,7 +186,7 @@ export interface paths {
         put?: never;
         /**
          * Trace
-         * @description Trace an uploaded PNG, JPEG or SVG into icon geometry. Stateless: nothing is stored.
+         * @description Trace an uploaded PNG, JPEG, WebP or SVG into icon geometry. Stateless: nothing is stored.
          */
         post: operations["trace_api_icons_trace_post"];
         delete?: never;
@@ -856,8 +856,35 @@ export interface components {
              */
             text: string;
         };
+        /**
+         * TraceCrop
+         * @description The part of the source to trace, as fractions of its width and height.
+         */
+        TraceCrop: {
+            /**
+             * H
+             * @default 1
+             */
+            h: number;
+            /**
+             * W
+             * @default 1
+             */
+            w: number;
+            /**
+             * X
+             * @default 0
+             */
+            x: number;
+            /**
+             * Y
+             * @default 0
+             */
+            y: number;
+        };
         /** TraceOptions */
         TraceOptions: {
+            crop?: components["schemas"]["TraceCrop"] | null;
             /**
              * Drop Largest
              * @default false
@@ -885,6 +912,12 @@ export interface components {
              * @default 0.4
              */
             simplify: number;
+            /**
+             * Smooth
+             * @description Edge blur, in source pixels
+             * @default 0.5
+             */
+            smooth: number;
             /**
              * Threshold
              * @default 128

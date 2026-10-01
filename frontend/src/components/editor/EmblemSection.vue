@@ -20,7 +20,7 @@ import { useCoinStore } from '@/stores/coin'
 import { useHealthStore } from '@/stores/health'
 import type { FaceName, IconGeometry, IconPlacement } from '@/types/coin'
 
-const ICON_ACCEPT = '.png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml'
+const ICON_ACCEPT = '.png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml'
 const ICON_MAX_BYTES = 10 * 1024 * 1024
 
 const props = defineProps<{ face: FaceName }>()

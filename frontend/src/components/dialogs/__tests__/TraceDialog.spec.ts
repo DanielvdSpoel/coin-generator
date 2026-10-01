@@ -57,6 +57,12 @@ const response: TraceResponse = {
   warnings: ['touches_edge'],
 }
 
+/** jsdom has no PointerEvent: a MouseEvent with the pointer type reaches the same listeners. */
+async function fire(el: { element: Element }, type: string, init: MouseEventInit = {}) {
+  el.element.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, ...init }))
+  await nextTick()
+}
+
 async function flush(): Promise<void> {
   for (let i = 0; i < 6; i++) await nextTick()
   await vi.advanceTimersByTimeAsync(0)
@@ -142,6 +148,31 @@ describe('TraceDialog', () => {
     await flush()
     expect(traced).toHaveBeenCalledTimes(2)
     expect(traced.mock.calls[1]?.[1]).toMatchObject({ threshold: 160 })
+    wrapper.unmount()
+  })
+
+  it('sends the crop drawn over the source, and drops it again on reset', async () => {
+    const { wrapper } = mountDialog()
+    await flush()
+    expect(traced.mock.calls[0]?.[1]).toMatchObject({ crop: null })
+    expect(wrapper.text()).toContain(en.trace.cropHint)
+
+    const surface = wrapper.get('[data-testid="crop-surface"]')
+    surface.element.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
+    await fire(surface, 'pointerdown', { clientX: 10, clientY: 20, button: 0 })
+    await fire(surface, 'pointermove', { clientX: 60, clientY: 70 })
+    await fire(surface, 'pointerup')
+    await vi.advanceTimersByTimeAsync(300)
+    await flush()
+    expect(traced).toHaveBeenCalledTimes(2)
+    expect(traced.mock.calls[1]?.[1]).toMatchObject({ crop: { x: 0.1, y: 0.2, w: 0.5, h: 0.5 } })
+
+    const reset = wrapper.findAll('button').find((b) => b.text() === en.trace.cropReset)
+    await reset!.trigger('click')
+    await vi.advanceTimersByTimeAsync(300)
+    await flush()
+    expect(traced.mock.calls[2]?.[1]).toMatchObject({ crop: null })
     wrapper.unmount()
   })
 

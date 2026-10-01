@@ -1194,9 +1194,55 @@
         "title": "TextConfig",
         "type": "object"
       },
+      "TraceCrop": {
+        "additionalProperties": false,
+        "description": "The part of the source to trace, as fractions of its width and height.",
+        "properties": {
+          "h": {
+            "default": 1,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "H",
+            "type": "number"
+          },
+          "w": {
+            "default": 1,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "W",
+            "type": "number"
+          },
+          "x": {
+            "default": 0,
+            "exclusiveMaximum": 1.0,
+            "minimum": 0.0,
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "default": 0,
+            "exclusiveMaximum": 1.0,
+            "minimum": 0.0,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "title": "TraceCrop",
+        "type": "object"
+      },
       "TraceOptions": {
         "additionalProperties": false,
         "properties": {
+          "crop": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TraceCrop"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "drop_largest": {
             "default": false,
             "title": "Drop Largest",
@@ -1234,6 +1280,14 @@
             "maximum": 5.0,
             "minimum": 0.0,
             "title": "Simplify",
+            "type": "number"
+          },
+          "smooth": {
+            "default": 0.5,
+            "description": "Edge blur, in source pixels",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Smooth",
             "type": "number"
           },
           "threshold": {
@@ -1809,7 +1863,7 @@
     },
     "/api/icons/trace": {
       "post": {
-        "description": "Trace an uploaded PNG, JPEG or SVG into icon geometry. Stateless: nothing is stored.",
+        "description": "Trace an uploaded PNG, JPEG, WebP or SVG into icon geometry. Stateless: nothing is stored.",
         "operationId": "trace_api_icons_trace_post",
         "requestBody": {
           "content": {

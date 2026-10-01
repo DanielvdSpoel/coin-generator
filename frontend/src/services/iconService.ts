@@ -17,12 +17,14 @@ export type TraceOptions = Schemas['TraceOptions'] & {
 export const DEFAULT_TRACE_OPTIONS: Required<TraceOptions> = {
   threshold: 128,
   simplify: 0.4,
+  smooth: 0.5,
   drop_largest: false,
   inner_disc: null,
   min_area: 0,
   invert: false,
   drop_thin_rings: true,
   embed_source: false,
+  crop: null,
 }
 
 /** Fill the wire type's optional fields so the geometry matches the store's complete shape. */
@@ -39,6 +41,7 @@ export function completeGeometry(wire: WireTraceResponse['geometry']): IconGeome
             ? ({
                 ...src.trace,
                 inner_disc: src.trace.inner_disc ?? null,
+                crop: src.trace.crop ?? null,
                 // Tolerates a schema with or without `drop_thin_rings` (default true).
                 drop_thin_rings:
                   (src.trace as { drop_thin_rings?: boolean }).drop_thin_rings ?? true,
@@ -49,7 +52,7 @@ export function completeGeometry(wire: WireTraceResponse['geometry']): IconGeome
   }
 }
 
-/** Trace an image (PNG, JPEG or SVG) into icon geometry. Rejects with `ApiError`. */
+/** Trace an image (PNG, JPEG, WebP or SVG) into icon geometry. Rejects with `ApiError`. */
 export async function traceIcon(
   file: File,
   options: TraceOptions,

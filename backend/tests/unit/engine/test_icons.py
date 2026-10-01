@@ -12,6 +12,7 @@ from src.core.engine.geometry import max_radius, polygons
 from src.core.engine.icons import (
     geometry_from_config,
     geometry_to_config,
+    ink_field,
     ink_mask,
     is_thin_ring,
     isolate,
@@ -20,6 +21,7 @@ from src.core.engine.icons import (
     normalise,
     place_icon,
     trace_image,
+    trace_mask,
     trace_png,
 )
 from src.core.exceptions import IconTraceFailed, InvalidConfig
@@ -105,6 +107,42 @@ def test_trace_of_an_empty_or_broken_image_fails_cleanly() -> None:
         trace_image(Image.new("RGBA", (50, 50), (0, 0, 0, 0)))
     with pytest.raises(IconTraceFailed, match="could not read"):
         trace_png(b"not an image")
+
+
+def _antialiased_disc(size: int) -> Image.Image:
+    """A black disc on white, drawn 8x larger and scaled down so its edge is soft."""
+    big = Image.new("L", (size * 8, size * 8), 255)
+    ImageDraw.Draw(big).ellipse(
+        [8 * size * 0.05, 8 * size * 0.05, 8 * size * 0.95, 8 * size * 0.95], fill=0
+    )
+    return big.resize((size, size), Image.Resampling.LANCZOS).convert("RGB")
+
+
+def _radius_error(geom: BaseGeometry) -> float:
+    xy = np.array(geom.exterior.coords)
+    return float(np.abs(np.hypot(xy[:, 0], xy[:, 1]) - 100).max())
+
+
+def test_trace_follows_the_antialiased_edge_not_the_pixel_staircase() -> None:
+    image = _antialiased_disc(400)
+    smooth = trace_image(image)
+    staircase = trace_mask(ink_mask(image))
+    assert _radius_error(smooth) < 0.15
+    assert _radius_error(smooth) < _radius_error(staircase) / 2
+
+
+def test_inverting_the_field_flips_exactly_the_mask() -> None:
+    image = Image.new("RGBA", (60, 60), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse([2, 2, 58, 58], fill=(0, 0, 0, 255))
+    draw.ellipse([10, 10, 50, 50], fill=(255, 255, 255, 255))  # badge paper
+    draw.rectangle([25, 15, 35, 45], fill=(40, 40, 40, 128))
+    for source in (image, image.convert("RGB")):
+        for threshold in (0, 20, 128, 255):
+            field, level = ink_field(source, threshold)
+            flipped, same = ink_field(source, threshold, invert=True)
+            assert same == level
+            assert np.array_equal(flipped > level, ~(field > level))
 
 
 def test_logo_poly_assembles_subpaths_even_odd() -> None:

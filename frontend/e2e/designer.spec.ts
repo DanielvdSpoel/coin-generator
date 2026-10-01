@@ -56,3 +56,37 @@ test('upload, trace and drag an emblem', async ({ page }) => {
   expect(Number(await across.inputValue())).toBeGreaterThan(0)
   expect(Number(await up.inputValue())).toBeGreaterThan(0)
 })
+
+test('crop the source before tracing', async ({ page }) => {
+  await startFrom(page)
+  await page.getByRole('button', { name: /^replace$/i }).click()
+  await page.getByLabel(/upload a logo/i).setInputFiles(STAR_PNG)
+  const trace = page.getByRole('dialog', { name: /trace a logo/i })
+  await expect(trace.getByRole('button', { name: /use this icon/i })).toBeEnabled({
+    timeout: 20_000,
+  })
+
+  // Drag over the top-left quarter of the source image.
+  const source = trace.getByTestId('crop-surface')
+  const box = await source.boundingBox()
+  if (!box) throw new Error('crop surface has no box')
+  // The server echoes the options it traced with: wait for an answer that was cropped.
+  const traced = page.waitForResponse(
+    async (r) =>
+      r.url().endsWith('/api/icons/trace') &&
+      r.ok() &&
+      (await r.json()).geometry?.source?.trace?.crop != null,
+  )
+  await page.mouse.move(box.x + 2, box.y + 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 5 })
+  await page.mouse.up()
+  await traced
+  await expect(trace.getByTestId('crop-box')).toBeVisible()
+  await expect(trace.getByRole('button', { name: /use the whole image/i })).toBeVisible()
+  await expect(trace.getByTestId('trace-preview')).toBeVisible()
+  if (process.env.E2E_SHOT) await trace.screenshot({ path: process.env.E2E_SHOT })
+
+  await trace.getByRole('button', { name: /use the whole image/i }).click()
+  await expect(trace.getByTestId('crop-box')).toBeHidden()
+})

@@ -1,6 +1,6 @@
 """Turns an uploaded image into ``IconGeometry`` (stateless, decision D2).
 
-PNG and JPEG are read with Pillow; SVG is rasterised first (``Rasteriser``) and
+PNG, JPEG and WebP are read with Pillow; SVG is rasterised first (``Rasteriser``) and
 then goes through the same mask → trace → isolate pipeline
 (``coin-tool-addendum.md`` §1). Warnings are codes the frontend translates.
 """
@@ -14,24 +14,32 @@ from dataclasses import dataclass, field
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
-from src.core.config.models import MAX_ICON_VERTICES, IconGeometry, IconSource, TraceOptions
+from src.core.config.models import (
+    MAX_ICON_VERTICES,
+    IconGeometry,
+    IconSource,
+    TraceCrop,
+    TraceOptions,
+)
 from src.core.engine.geometry import polygons, to_svg_d, vertex_count
 from src.core.engine.icons import (
     geometry_to_config,
-    ink_mask,
+    ink_field,
     isolate,
     mask_warnings,
     normalise,
-    trace_mask,
+    smooth_field,
+    trace_field,
 )
 from src.core.exceptions import IconTraceFailed, PayloadTooLarge
 from src.core.interfaces.metrics import Metrics, NullMetrics
 from src.core.interfaces.rasteriser import Rasteriser
 
-_MEDIA_TYPES = {"PNG": "image/png", "JPEG": "image/jpeg"}
+_MEDIA_TYPES = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
 _SVG_MEDIA_TYPE = "image/svg+xml"
 _MAX_PIXELS = 40_000_000
 TRACE_SIZE_PX = 1024
+MAX_SVG_RENDER_PX = 4096
 
 
 @dataclass(frozen=True)
@@ -51,17 +59,38 @@ def is_svg(data: bytes, filename: str) -> bool:
     return filename.lower().endswith(".svg") or data.lstrip()[:5].lower() in _SVG_HEADS
 
 
-def downscale(image: Image.Image, size_px: int = TRACE_SIZE_PX) -> Image.Image:
-    """RGBA copy with the long side at most ``size_px`` (LANCZOS)."""
+def resize_for_trace(image: Image.Image, size_px: int = TRACE_SIZE_PX) -> Image.Image:
+    """RGBA copy with the long side at ``size_px`` (LANCZOS); see ``trace_scale``.
+
+    Small sources are scaled up too: the smooth interpolation gives the contour
+    more edge to follow, and ``simplify`` keeps the same meaning for every upload.
+    """
     image = image.convert("RGBA")
     longest = max(image.size)
-    if longest <= size_px:
+    if longest == size_px:
         return image
     factor = size_px / longest
     return image.resize(
         (max(1, round(image.width * factor)), max(1, round(image.height * factor))),
         Image.Resampling.LANCZOS,
     )
+
+
+def trace_scale(image: Image.Image, size_px: int = TRACE_SIZE_PX) -> float:
+    """How many trace pixels one source pixel becomes in ``resize_for_trace``."""
+    return size_px / max(image.size)
+
+
+def crop_image(image: Image.Image, crop: TraceCrop | None) -> Image.Image:
+    """The ``crop`` part of ``image``, rounded to whole pixels and at least one wide."""
+    if crop is None:
+        return image
+    w, h = image.size
+    left = min(w - 1, round(crop.x * w))
+    top = min(h - 1, round(crop.y * h))
+    right = max(left + 1, min(w, round((crop.x + crop.w) * w)))
+    bottom = max(top + 1, min(h, round((crop.y + crop.h) * h)))
+    return image.crop((left, top, right, bottom))
 
 
 class IconService:
@@ -77,18 +106,33 @@ class IconService:
         self._max_vertices = max_vertices
         self._metrics = metrics or NullMetrics()
 
-    def _load(self, data: bytes, filename: str) -> tuple[Image.Image, str]:
-        """The upload as an RGBA image no larger than ``TRACE_SIZE_PX``, and its media type."""
+    def _render_svg(self, data: bytes, size_px: int) -> Image.Image:
+        rgba = self._rasteriser.svg_to_rgba(data, size_px)
+        return Image.fromarray(np.asarray(rgba, dtype=np.uint8), "RGBA")
+
+    def _load(
+        self, data: bytes, filename: str, crop: TraceCrop | None
+    ) -> tuple[Image.Image, float, str]:
+        """The upload, cropped, as an RGBA image at ``TRACE_SIZE_PX``; the trace pixels
+        per source pixel; and the media type."""
         if is_svg(data, filename):
-            rgba = self._rasteriser.svg_to_rgba(data, TRACE_SIZE_PX)
-            return Image.fromarray(np.asarray(rgba, dtype=np.uint8), "RGBA"), _SVG_MEDIA_TYPE
+            image = self._render_svg(data, TRACE_SIZE_PX)
+            if crop is not None:
+                # Render again larger so the part that is kept still has the detail.
+                kept = max(crop.w * image.width, crop.h * image.height)
+                size_px = min(MAX_SVG_RENDER_PX, round(TRACE_SIZE_PX * TRACE_SIZE_PX / kept))
+                if size_px > TRACE_SIZE_PX:
+                    image = self._render_svg(data, size_px)
+            image = crop_image(image, crop)
+            return resize_for_trace(image), trace_scale(image), _SVG_MEDIA_TYPE
         try:
             with Image.open(io.BytesIO(data)) as image:
                 if image.format not in _MEDIA_TYPES:
                     raise IconTraceFailed(f"unsupported image type {image.format or 'unknown'}")
                 if image.width * image.height > _MAX_PIXELS:
                     raise IconTraceFailed("image has too many pixels; resize it below 6000 x 6000")
-                return downscale(image), _MEDIA_TYPES[image.format]
+                cropped = crop_image(image, crop)
+                return resize_for_trace(cropped), trace_scale(cropped), _MEDIA_TYPES[image.format]
         except UnidentifiedImageError as exc:
             raise IconTraceFailed("file is not an image") from exc
 
@@ -106,10 +150,13 @@ class IconService:
     ) -> TraceResult:
         if len(data) > self._max_bytes:
             raise PayloadTooLarge(f"image is larger than {self._max_bytes // (1024 * 1024)} MB")
-        image, media_type = self._load(data, filename)
-        mask = ink_mask(image, options.threshold, options.invert)
+        image, scale, media_type = self._load(data, filename, options.crop)
+        field, level = ink_field(image, options.threshold, options.invert)
+        mask = field > level
+        if not mask.any():
+            raise IconTraceFailed("nothing to trace: the image has no ink")
         warnings = mask_warnings(mask)
-        geometry = trace_mask(mask, options.simplify)
+        geometry = trace_field(smooth_field(field, options.smooth * scale), level, options.simplify)
 
         geometry, codes = isolate(
             geometry,
