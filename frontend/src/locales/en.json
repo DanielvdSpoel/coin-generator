@@ -118,6 +118,7 @@
     "bottomPlaceholder": "e.g. Est. 2021",
     "letterSize": "Letter size",
     "spacing": "Spacing",
+    "radius": "Distance from centre",
     "dots": "Separator dots between the two texts",
     "missingGlyph": "The font has no glyph for: {chars}",
     "bottomHelp": "The bottom text reads left to right, so its letters stand inward from the arc and descenders (g, p, y) hang out toward the rim. Its radius is set larger than the top's; keep the descenders clear of the rim."

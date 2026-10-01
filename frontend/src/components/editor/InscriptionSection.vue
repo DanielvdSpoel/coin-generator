@@ -16,6 +16,9 @@ const coin = useCoinStore()
 const ui = useUiStore()
 const f = computed(() => coin.config.faces[props.face])
 const mmPerUnit = computed(() => coin.config.size.diameter_mm / DESIGN_DIAMETER)
+/** The text band the backend allows: 4 units clear of the divider and of the rim. */
+const radiusMin = computed(() => coin.config.rings.r_div_out + 4)
+const radiusMax = computed(() => coin.config.rings.r_inlay - 4)
 
 /** The characters the font lacks, from the server's `missing_glyph` warning for this text. */
 function missingGlyphs(slot: TextSlot): string {
@@ -41,7 +44,7 @@ function setText(slot: TextSlot, e: Event): void {
   const value = (e.target as HTMLInputElement).value.slice(0, MAX_TEXT_LENGTH)
   coin.updateFace(props.face, (face) => (face[slot].text = value), `text:${slot}`)
 }
-function setNumber(slot: TextSlot, key: 'size' | 'letter_spacing', value: number): void {
+function setNumber(slot: TextSlot, key: 'size' | 'letter_spacing' | 'radius', value: number): void {
   coin.updateFace(props.face, (face) => (face[slot][key] = value), `${slot}.${key}`)
 }
 </script>
@@ -96,6 +99,17 @@ function setNumber(slot: TextSlot, key: 'size' | 'letter_spacing', value: number
         :decimals="2"
         :unit="t('units.mm')"
         @update:model-value="setNumber(slot, 'letter_spacing', $event)"
+      />
+      <RangeField
+        :label="t('inscription.radius')"
+        :model-value="f[slot].radius"
+        :min="radiusMin"
+        :max="radiusMax"
+        :step="0.5"
+        :scale="mmPerUnit"
+        :decimals="2"
+        :unit="t('units.mm')"
+        @update:model-value="setNumber(slot, 'radius', $event)"
       />
       <span v-if="slot === 'bottom_text'" class="text-xs text-pretty text-ink-2">{{
         t('inscription.bottomHelp')
