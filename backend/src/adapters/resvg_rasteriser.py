@@ -1,4 +1,7 @@
-"""SVG → RGBA bitmap through cairosvg (``coin-tool-addendum.md`` §1).
+"""SVG → RGBA bitmap through resvg (``coin-tool-addendum.md`` §1).
+
+resvg implements masks, clip paths and filters; cairosvg ignored ``<mask>``, so a
+logo that cut its details with one traced as a solid shape.
 
 The document is checked before it reaches the renderer. Rejected outright:
 ``<script>``, ``<image>``, ``<foreignObject>``, any ``href``/``xlink:href`` that is
@@ -68,20 +71,16 @@ def sanitise_svg(data: bytes) -> bytes:
     return ET.tostring(root, encoding="utf-8") if stripped else data
 
 
-class CairoSvgRasteriser(Rasteriser):
+class ResvgRasteriser(Rasteriser):
     def svg_to_rgba(self, data: bytes, size_px: int) -> np.ndarray:
-        import cairosvg
+        import resvg_py
 
-        source = sanitise_svg(data)
+        source = sanitise_svg(data).decode("utf-8", errors="replace")
         try:
-            png = cairosvg.svg2png(bytestring=source, output_width=size_px)
-            rgba = self._decode(png)
+            rgba = self._decode(resvg_py.svg_to_bytes(svg_string=source, width=size_px))
             if rgba.shape[0] > size_px:  # portrait: the long side is the height
-                png = cairosvg.svg2png(bytestring=source, output_height=size_px)
-                rgba = self._decode(png)
-        except IconTraceFailed:
-            raise
-        except Exception as exc:  # cairosvg raises a mix of ValueError/TypeError/OSError
+                rgba = self._decode(resvg_py.svg_to_bytes(svg_string=source, height=size_px))
+        except ValueError as exc:  # resvg reports every parse and render failure this way
             raise IconTraceFailed(f"SVG could not be rendered: {exc}") from exc
         return rgba
 

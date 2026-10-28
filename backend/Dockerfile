@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1.7
 FROM python:3.12-slim AS base
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
-# cairosvg (phase 5) needs libcairo2; matplotlib/fontTools need nothing extra.
-RUN apt-get update && apt-get install -y --no-install-recommends libcairo2 && rm -rf /var/lib/apt/lists/*
 
 FROM base AS deps
 COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv

@@ -54,7 +54,7 @@ Directory names lowercase and hyphenated. Python packages snake_case.
    └ tools/        pure helpers: config hashing, canonical json, units
    │
  adapters/     Implementations of the interfaces: disk font registry, json filament
-               registry, LRU cache, cairosvg rasteriser
+               registry, LRU cache, resvg rasteriser
    │
  container.py  Wires adapters into services. Only place that knows both.
 ```
@@ -76,7 +76,7 @@ Where does it go:
 backend/
 ├── pyproject.toml            uv-managed; deps: fastapi, uvicorn, pydantic, shapely, trimesh,
 │                             manifold3d, mapbox-earcut, matplotlib, pillow, scikit-image,
-│                             scipy, cairosvg, numpy, svgpathtools
+│                             scipy, resvg, numpy, svgpathtools
 ├── main.py                   uvicorn entry (dev: loads .env before importing src)
 ├── fonts/                    Poppins-Medium.ttf, Poppins-SemiBold.ttf (+ .woff2 for the SPA)
 ├── data/
@@ -112,7 +112,7 @@ backend/
 │       ├── filamentcolors_source.py     HTTP client for filamentcolors.xyz (+ snapshot fallback)
 │       ├── memory_filament_registry.py  merged view: source + overrides, refreshed on a timer
 │       ├── lru_mesh_cache.py
-│       ├── cairosvg_rasteriser.py
+│       ├── resvg_rasteriser.py
 │       └── smtp_mailer.py               Mailer interface impl; a logging mailer in dev/tests
 └── tests/
     ├── unit/                 engine tests on real geometry; services with Mock(Interface)

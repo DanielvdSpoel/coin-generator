@@ -35,7 +35,6 @@ a phase. Promote by moving into a phase file.
 - **Sub-mesh caching** (body + rings cached separately from text/icon) if profiling
   says the union dominates (`coin-tool-architecture.md` §6.4).
 - **fontTools instead of matplotlib** for glyph outlines (lighter image, faster).
-- **resvg instead of cairosvg** for SVG rasterisation.
 - **WebAssembly 2D preview of the exact engine** (shapely is C, so no; but a tiny
   glyph layout port in TS is feasible).
 - **Server-side render of thumbnails as PNG** for social previews.

@@ -260,3 +260,12 @@ def test_near_black_knockouts_over_a_light_mark_are_background() -> None:
     draw.rectangle([90, 90, 110, 110], fill=(200, 160, 80, 255))
     mask = ink_mask(mark)
     assert mask[50, 50] and mask[100, 100]
+
+
+def test_isolate_keeps_a_wiry_part_beside_the_mark() -> None:
+    """A thin-lined shield next to a solid mark spans the extent but encloses nothing."""
+    shield = box(10, -100, 100, 100).difference(box(18, -92, 92, 92))
+    mark = box(-100, -60, 0, 60)
+    assert is_thin_ring(shield, (-100, -100, 100, 100))  # on shape alone it looks like one
+    kept, codes = isolate(unary_union([shield, mark]))
+    assert "thin_ring_dropped" not in codes and len(list(polygons(kept))) == 2

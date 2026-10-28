@@ -230,6 +230,7 @@ def trace_image(
 
 THIN_RING_FILL = 0.35
 THIN_RING_SPAN = 0.6
+ENCLOSES = 0.5
 BADGE_RATIO = 4.0
 BADGE_SPAN = 0.8
 
@@ -242,12 +243,24 @@ def _span(part: BaseGeometry, extent: tuple[float, float, float, float]) -> floa
 
 
 def is_thin_ring(part: BaseGeometry, extent: tuple[float, float, float, float]) -> bool:
-    """A decorative ring: a big bounding box that the ink barely fills."""
+    """A decorative ring by shape: a big bounding box that the ink barely fills.
+
+    ``isolate`` only drops one that also encloses the rest (``_encloses``), so a wiry
+    element beside the mark (a shield of thin lines) is not mistaken for one.
+    """
     minx, miny, maxx, maxy = part.bounds
     bbox_area = (maxx - minx) * (maxy - miny)
     if bbox_area <= 0:
         return False
     return part.area / bbox_area < THIN_RING_FILL and _span(part, extent) > THIN_RING_SPAN
+
+
+def _encloses(part: BaseGeometry, rest: BaseGeometry) -> bool:
+    """Whether most of ``rest`` lies within the outline of ``part`` (holes filled)."""
+    if rest.is_empty:
+        return True
+    outline = unary_union([Polygon(p.exterior) for p in polygons(part)])
+    return rest.intersection(outline).area >= ENCLOSES * rest.area
 
 
 def isolate(
@@ -275,10 +288,21 @@ def isolate(
         if drop_largest:
             parts = parts[1:]
             codes.append("largest_dropped")
-        elif parts[0].area > BADGE_RATIO * parts[1].area and _span(parts[0], extent) > BADGE_SPAN:
+        elif (
+            parts[0].area > BADGE_RATIO * parts[1].area
+            and _span(parts[0], extent) > BADGE_SPAN
+            and _encloses(parts[0], unary_union(parts[1:]))
+        ):
             dominant = parts[0]
     if drop_thin_rings and len(parts) > 1:
-        kept = [p for p in parts if not is_thin_ring(p, extent)]
+        kept = [
+            p
+            for i, p in enumerate(parts)
+            # The cheap shape test first: the union of the rest only for real candidates.
+            if not (
+                is_thin_ring(p, extent) and _encloses(p, unary_union(parts[:i] + parts[i + 1 :]))
+            )
+        ]
         if kept and len(kept) < len(parts):
             codes.append("thin_ring_dropped")
             parts = kept
