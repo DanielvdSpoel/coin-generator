@@ -86,7 +86,7 @@ assembly and validation now because the build needs it).
 ### 1.6 Export (`engine/export.py`)
 - [x] `to_stl(mesh) -> bytes`.
 - [x] `to_glb(mesh, material_index, colors) -> bytes`: split into three submeshes by
-      index, PBR materials (relief: metallic 0.9 / roughness 0.35; inlay: metallic 0
+      index, PBR materials (per filament finish, see `export._PBR`; was relief: metallic 0.9 / roughness 0.35; inlay: metallic 0
       / roughness 0.6), one `trimesh.Scene`, `scene.export(file_type="glb")`.
 - [x] `to_3mf(volumes, colors, title) -> bytes`: named objects `body`,
       `enamel_front`, `enamel_back` as components of one assembly object. Written by

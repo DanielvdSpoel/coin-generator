@@ -8,12 +8,14 @@ import trimesh
 
 from src.core.engine import export
 from src.core.engine.build import BuiltCoin
-from src.core.engine.colors import CoinColors, darken, hex_to_rgb
+from src.core.engine.colors import CoinColors, darken, hex_to_rgb, surface_for
 from src.core.engine.materials import PrintVolumes, classify_faces, enamel_volumes
 from src.core.exceptions import NotWatertight
 from tests.conftest import GOLDEN
 
-COLORS = CoinColors(relief="#dca256", front="#1e4d8c", back="#141414")
+COLORS = CoinColors(
+    relief="#dca256", front="#1e4d8c", back="#141414", relief_surface="silk", front_surface="matte"
+)
 
 
 def _open_box() -> trimesh.Trimesh:
@@ -58,10 +60,13 @@ def test_glb_has_three_pbr_materials(built_default: BuiltCoin) -> None:
     assert tuple(relief.baseColorFactor[:3]) == hex_to_rgb(COLORS.relief)
     assert tuple(front.baseColorFactor[:3]) == hex_to_rgb(COLORS.front)
     assert tuple(back.baseColorFactor[:3]) == hex_to_rgb(COLORS.back)
-    assert relief.metallicFactor == pytest.approx(0.9)
-    assert relief.roughnessFactor == pytest.approx(0.35)
+    # Silk relief keeps some sheen; plain plastic is a rough dielectric, matte rougher still.
+    assert relief.metallicFactor == pytest.approx(0.55)
+    assert relief.roughnessFactor == pytest.approx(0.33)
     assert front.metallicFactor == pytest.approx(0.0)
-    assert front.roughnessFactor == pytest.approx(0.6)
+    assert front.roughnessFactor == pytest.approx(0.9)
+    assert back.metallicFactor == pytest.approx(0.0)
+    assert back.roughnessFactor == pytest.approx(0.62)
 
 
 def test_glb_skips_materials_without_faces(built_default: BuiltCoin) -> None:
@@ -185,3 +190,20 @@ def test_colour_helpers() -> None:
     assert hex_to_rgb("#1e4d8c") == (30, 77, 140)
     assert darken("#646464", 0.15) == "#555555"
     assert COLORS.inlay("front") == "#1e4d8c" and COLORS.inlay("back") == "#141414"
+
+
+@pytest.mark.parametrize(
+    ("finish", "surface"),
+    [
+        ("PLA Silk+", "silk"),
+        ("Silk PLA", "silk"),
+        ("PLA Matte", "matte"),
+        ("PLA Wood", "matte"),
+        ("Panchroma Metallic", "metallic"),
+        ("PLA Basic", "basic"),
+        ("PETG", "basic"),
+        ("", "basic"),
+    ],
+)
+def test_surface_for_buckets_finishes(finish: str, surface: str) -> None:
+    assert surface_for(finish) == surface

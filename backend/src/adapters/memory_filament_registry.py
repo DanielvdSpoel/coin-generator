@@ -63,14 +63,22 @@ class MemoryFilamentRegistry(FilamentRegistry):
     def resolve(self, color: ColorRef) -> str:
         if color.hex is not None:
             return color.hex.lower()
+        return self._get(color.filament).hex
+
+    def finish(self, color: ColorRef) -> str:
+        if color.hex is not None:
+            return ""
+        return self._get(color.filament).finish
+
+    def _get(self, filament_id: str | None) -> Filament:
         with self._lock:
-            filament = self._filaments.get(color.filament)
+            filament = self._filaments.get(filament_id)
         if filament is None:
             raise UnknownFilament(
-                f"unknown filament id '{color.filament}'",
+                f"unknown filament id '{filament_id}'",
                 [{"loc": [], "msg": "unknown filament id", "code": "filament_unknown"}],
             )
-        return filament.hex
+        return filament
 
     def version(self) -> FilamentVersion:
         with self._lock:

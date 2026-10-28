@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * The coin "in hand": the real mesh from `/api/preview/glb`, two-tone, under a
- * neutral studio environment so the metallic relief shows sheen.
+ * neutral studio environment; each material's sheen follows its filament finish.
  *
  * Materials come from the GLB (set by the engine); the viewer only lights them.
  * A new model replaces the old one on load and the old one is disposed, so a

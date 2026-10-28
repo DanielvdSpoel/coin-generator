@@ -13,7 +13,7 @@ from xml.sax.saxutils import quoteattr
 import numpy as np
 import trimesh
 
-from src.core.engine.colors import CoinColors, hex_to_rgb
+from src.core.engine.colors import CoinColors, Surface, hex_to_rgb
 from src.core.engine.materials import MATERIAL_NAMES, PrintVolumes
 from src.core.exceptions import NotWatertight
 
@@ -48,20 +48,31 @@ def to_stl(mesh: trimesh.Trimesh, what: str = "coin") -> bytes:
     return mesh.export(file_type="stl")
 
 
+# (metallic, roughness) per filament surface. Printed plastic is a dielectric, so
+# only silk (tinted, pearly highlights) and metal-filled filaments get any metalness.
+_PBR: dict[Surface, tuple[float, float]] = {
+    "matte": (0.0, 0.9),
+    "basic": (0.0, 0.62),
+    "silk": (0.55, 0.33),
+    "metallic": (0.25, 0.5),
+}
+
+
 def to_glb(mesh: trimesh.Trimesh, material_index: np.ndarray, colors: CoinColors) -> bytes:
     """GLB for the 3D preview: one submesh per material, PBR.
 
-    The relief is metallic, the inlays matte. No vertex normals are written, so
-    viewers shade flat and the relief edges stay crisp.
+    Each material's sheen follows its filament's finish (``_PBR``). No vertex normals
+    are written, so viewers shade flat and the relief edges stay crisp.
     """
     hexes = (colors.relief, colors.front, colors.back)
+    surfaces = (colors.relief_surface, colors.front_surface, colors.back_surface)
     scene = trimesh.Scene()
     for index, name in enumerate(MATERIAL_NAMES):
         faces = np.flatnonzero(material_index == index)
         if len(faces) == 0:
             continue
         part = mesh.submesh([faces], append=True)
-        metallic, roughness = (0.9, 0.35) if index == 0 else (0.0, 0.6)
+        metallic, roughness = _PBR[surfaces[index]]
         part.visual = trimesh.visual.TextureVisuals(
             material=trimesh.visual.material.PBRMaterial(
                 name=name,
