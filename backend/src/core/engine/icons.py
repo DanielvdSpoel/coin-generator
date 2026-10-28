@@ -82,6 +82,34 @@ def place_icon(geom: BaseGeometry, placement: IconPlacement, r_limit: float) -> 
 
 BADGE_PAPER_DARKNESS = 20
 _BADGE_RAMP = 8.0
+KNOCKOUT_VALUE = 48
+KNOCKOUT_INK_VALUE = 96
+KNOCKOUT_MAX_SHARE = 0.35
+
+
+def _knockout_field(field: np.ndarray, rgb: np.ndarray, level: float) -> np.ndarray | None:
+    """Alpha field with near-black knockouts painted over a lighter mark taken out.
+
+    Logos drawn for a dark page often cut their details (page lines, a gap around
+    an emblem) by painting near-black over the mark instead of leaving holes. Alpha
+    alone sees those as ink. When the opaque area is mostly light ink with a
+    minority of near-black, the near-black is the page. A mostly black mark (black
+    with a few coloured accents) is left alone. ``None`` when there are no knockouts.
+    """
+    value = rgb.max(2)
+    solid = value[field >= 250]
+    if not solid.size:
+        return None
+    dark = solid[solid < KNOCKOUT_VALUE]
+    light = solid[solid >= KNOCKOUT_INK_VALUE]
+    if not dark.size or dark.size > KNOCKOUT_MAX_SHARE * solid.size or light.size * 2 < solid.size:
+        return None
+    ink, page = float(np.median(light)), float(np.median(dark))
+    # Anti-aliasing blends linearly, so the edge sits halfway between the two colours.
+    edge = (ink + page) / 2
+    ramp = 2 * 255 / (ink - page)
+    paper = np.clip(level + (value - edge) * ramp, level - 255, level + 255)
+    return np.minimum(field, paper)
 
 
 def ink_field(
@@ -94,7 +122,8 @@ def ink_field(
     fraction of a pixel instead of following the pixel staircase.
 
     Uses alpha when the image has real transparency, darkness otherwise (``invert``
-    flips that: light pixels become ink).
+    flips that: light pixels become ink). Within the opaque area, near-white "paper"
+    under a dark mark and near-black knockouts over a light mark are background.
     """
     a = np.array(image.convert("RGBA")).astype(np.float64)
     darkness = 255 - a[:, :, :3].min(2)
@@ -110,6 +139,10 @@ def ink_field(
             paper = level + (darkness - (BADGE_PAPER_DARKNESS - 0.5)) * _BADGE_RAMP
             # Bounded like alpha, so ``smooth_field`` blurs paper and ink evenly.
             field = np.minimum(field, np.clip(paper, level - 255, level + 255))
+        else:
+            knocked = _knockout_field(field, a[:, :, :3], level)
+            if knocked is not None:
+                field = knocked
     else:
         field = darkness
     if invert:
