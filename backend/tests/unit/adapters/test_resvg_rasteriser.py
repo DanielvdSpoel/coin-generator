@@ -1,7 +1,7 @@
 import pytest
 from PIL import Image
 
-from src.adapters.cairosvg_rasteriser import CairoSvgRasteriser, sanitise_svg
+from src.adapters.resvg_rasteriser import ResvgRasteriser, sanitise_svg
 from src.core.engine.icons import trace_image
 from src.core.exceptions import IconTraceFailed
 
@@ -14,7 +14,7 @@ RING_WITH_SQUARE_HOLE = (
 
 
 def test_renders_on_a_transparent_background_at_the_requested_size() -> None:
-    rgba = CairoSvgRasteriser().svg_to_rgba(RING_WITH_SQUARE_HOLE, 256)
+    rgba = ResvgRasteriser().svg_to_rgba(RING_WITH_SQUARE_HOLE, 256)
     assert rgba.shape == (256, 256, 4) and rgba.dtype == "uint8"
     assert rgba[0, 0, 3] == 0 and rgba[128, 128, 3] == 0  # corner and hole are clear
     assert rgba[128, 30, 3] == 255  # the ring is opaque ink
@@ -22,11 +22,11 @@ def test_renders_on_a_transparent_background_at_the_requested_size() -> None:
 
 def test_portrait_documents_put_the_long_side_on_the_height() -> None:
     svg = (_SVG + 'width="50" height="200"><rect width="50" height="200"/></svg>').encode()
-    assert CairoSvgRasteriser().svg_to_rgba(svg, 400).shape[:2] == (400, 100)
+    assert ResvgRasteriser().svg_to_rgba(svg, 400).shape[:2] == (400, 100)
 
 
 def test_rendered_svg_traces_with_its_hole() -> None:
-    rgba = CairoSvgRasteriser().svg_to_rgba(RING_WITH_SQUARE_HOLE, 512)
+    rgba = ResvgRasteriser().svg_to_rgba(RING_WITH_SQUARE_HOLE, 512)
     traced = trace_image(Image.fromarray(rgba, "RGBA"))
     assert traced.geom_type == "Polygon" and len(traced.interiors) == 1
 
@@ -47,7 +47,7 @@ def test_rendered_svg_traces_with_its_hole() -> None:
 def test_unsafe_documents_are_rejected(body: str, message: str) -> None:
     svg = (_SVG + f'width="20" height="20">{body}</svg>').encode()
     with pytest.raises(IconTraceFailed, match=message):
-        CairoSvgRasteriser().svg_to_rgba(svg, 64)
+        ResvgRasteriser().svg_to_rgba(svg, 64)
 
 
 def test_entities_and_garbage_are_rejected() -> None:
@@ -72,7 +72,7 @@ def test_same_document_references_and_plain_doctypes_are_allowed() -> None:
         b'<use xlink:href="#r"/><use href="#r" x="10"/></svg>'
     )
     assert sanitise_svg(svg) is svg
-    assert CairoSvgRasteriser().svg_to_rgba(svg, 40)[:, :, 3].max() == 255
+    assert ResvgRasteriser().svg_to_rgba(svg, 40)[:, :, 3].max() == 255
 
 
 def test_style_imports_are_stripped_not_rejected() -> None:
@@ -82,4 +82,15 @@ def test_style_imports_are_stripped_not_rejected() -> None:
     ).encode()
     cleaned = sanitise_svg(svg)
     assert b"@import" not in cleaned and b"fill: black" in cleaned
-    assert CairoSvgRasteriser().svg_to_rgba(svg, 40)[:, :, 3].max() == 255
+    assert ResvgRasteriser().svg_to_rgba(svg, 40)[:, :, 3].max() == 255
+
+
+def test_masks_cut_what_they_cover() -> None:
+    """Logos often cut their details with a luminance mask; cairosvg ignored those."""
+    svg = (
+        _SVG + 'width="100" height="100"><defs><mask id="m">'
+        '<rect width="100" height="100" fill="#fff"/><rect x="40" width="20" height="100"/>'
+        '</mask></defs><rect width="100" height="100" fill="#c9a24f" mask="url(#m)"/></svg>'
+    ).encode()
+    alpha = ResvgRasteriser().svg_to_rgba(svg, 100)[:, :, 3]
+    assert alpha[50, 50] == 0 and alpha[50, 20] == 255

@@ -9,13 +9,13 @@ with plain Python.
 
 from functools import cached_property, lru_cache
 
-from src.adapters.cairosvg_rasteriser import CairoSvgRasteriser
 from src.adapters.disk_font_registry import DiskFontRegistry
 from src.adapters.filamentcolors_source import FilamentColorsSource, SnapshotFilamentSource
 from src.adapters.fonttools_font_parser import FontToolsFontParser
 from src.adapters.lru_mesh_cache import LruMeshCache
 from src.adapters.memory_filament_registry import MemoryFilamentRegistry, load_overrides
 from src.adapters.prometheus_metrics import PrometheusMetrics
+from src.adapters.resvg_rasteriser import ResvgRasteriser
 from src.adapters.smtp_mailer import LoggingMailer, SmtpMailer
 from src.core.interfaces.filament_registry import FilamentRegistry
 from src.core.interfaces.font_parser import FontParser
@@ -108,7 +108,7 @@ class Container:
 
     @cached_property
     def _rasteriser(self) -> Rasteriser:
-        return CairoSvgRasteriser()
+        return ResvgRasteriser()
 
     @cached_property
     def _catalog_service(self) -> CatalogService:

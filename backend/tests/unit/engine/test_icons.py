@@ -240,3 +240,32 @@ def test_white_fills_inside_an_opaque_badge_are_background() -> None:
     mark = Image.new("RGBA", (100, 100), (0, 0, 0, 0))
     ImageDraw.Draw(mark).ellipse([20, 20, 80, 80], fill=(200, 30, 30, 255))
     assert ink_mask(mark)[50, 50]
+
+
+def test_near_black_knockouts_over_a_light_mark_are_background() -> None:
+    """A gold logo drawn for a dark page cuts its details with near-black fills."""
+    image = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle([20, 20, 180, 180], fill=(200, 160, 80, 255))  # gold page
+    for y in (50, 90, 130):
+        draw.rectangle([40, y, 160, y + 8], fill=(21, 21, 19, 255))  # page lines
+    mask = ink_mask(image)
+    assert not mask[54, 100]  # a page line is a gap
+    assert mask[70, 100] and mask[25, 25]  # the gold around it is ink
+
+    # A black mark with a small coloured accent keeps its black.
+    mark = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(mark)
+    draw.rectangle([20, 20, 180, 180], fill=(10, 10, 10, 255))
+    draw.rectangle([90, 90, 110, 110], fill=(200, 160, 80, 255))
+    mask = ink_mask(mark)
+    assert mask[50, 50] and mask[100, 100]
+
+
+def test_isolate_keeps_a_wiry_part_beside_the_mark() -> None:
+    """A thin-lined shield next to a solid mark spans the extent but encloses nothing."""
+    shield = box(10, -100, 100, 100).difference(box(18, -92, 92, 92))
+    mark = box(-100, -60, 0, 60)
+    assert is_thin_ring(shield, (-100, -100, 100, 100))  # on shape alone it looks like one
+    kept, codes = isolate(unary_union([shield, mark]))
+    assert "thin_ring_dropped" not in codes and len(list(polygons(kept))) == 2
